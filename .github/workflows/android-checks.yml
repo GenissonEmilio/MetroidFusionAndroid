@@ -19,6 +19,13 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: python3 tools/android/check_sources.py
+      - name: Verify pixel-art filtering and integer presentation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libsdl2-dev
+          mkdir -p build/pixel-test
+          g++ -std=c++17 -O2 -DMINISH_TEST_SDL -Isrc tests/pixel_filter_test.cpp src/pixel_presenter.cpp $(sdl2-config --cflags --libs) -o build/pixel-test/check
+          SDL_VIDEODRIVER=dummy build/pixel-test/check
       - name: Verify transactional ROM imports and bounded ZIP reads
         run: |
           mkdir -p build/import-test

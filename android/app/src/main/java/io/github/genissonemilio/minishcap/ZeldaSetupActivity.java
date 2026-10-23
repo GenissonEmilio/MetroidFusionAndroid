@@ -18,7 +18,7 @@ public class ZeldaSetupActivity extends Activity {
     private static final int GOLD=0xffdfc47d, TEXT=0xffedf3e6, MUTED=0xffa4bdad;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private TextView status;
-    private Button play,importButton;
+    private Button play,importButton,imageButton;
     private ProgressBar progress;
     private boolean busy;
     private int dp(float v) { return Math.round(v*getResources().getDisplayMetrics().density); }
@@ -76,17 +76,20 @@ public class ZeldaSetupActivity extends Activity {
         progress.setIndeterminate(true); progress.setVisibility(View.GONE); card.addView(progress);
         play=button("Jogar",true,this::launchGame); card.addView(play);
         importButton=button("Importar ROM  ·  .gba ou .zip",false,this::pickRom); card.addView(importButton);
+        imageButton=button("Imagem",false,this::imageSettings); card.addView(imageButton);
         LinearLayout row=new LinearLayout(this);
         Button controls=button("Controles",false,this::controls);
         Button save=button("Exportar save",false,this::exportSave);
         LinearLayout.LayoutParams half=new LinearLayout.LayoutParams(0,dp(48),1); half.rightMargin=dp(8);
         row.addView(controls,half); row.addView(save,new LinearLayout.LayoutParams(0,dp(48),1)); card.addView(row);
-        TextView about=text("Projeto de fãs independente • v0.1.0\nBIOS aberta incluída. Jogo original não incluído.",10,MUTED);
+        TextView about=text("Projeto de fãs independente • v"+BuildConfig.VERSION_NAME+"\nBIOS aberta incluída. Jogo original não incluído.",10,MUTED);
         about.setPadding(0,dp(12),0,0); about.setOnClickListener(v->about()); card.addView(about);
         cardScroll.addView(card); root.addView(cardScroll,new LinearLayout.LayoutParams(0,-1,1.2f));
         setContentView(root); update();
     }
     private void update() {
+        if(imageButton!=null) imageButton.setText("Imagem  ·  "+
+            (getSharedPreferences("minish",MODE_PRIVATE).getInt("pixel_mode",1)==0?"Pixel perfeito":"Suave"));
         boolean ready=rom().isFile() && rom().length()==RomImporter.SIZE;
         play.setEnabled(ready && !busy); play.setAlpha(ready?1:.4f);
         importButton.setEnabled(!busy);
@@ -157,6 +160,29 @@ public class ZeldaSetupActivity extends Activity {
         sound.setOnCheckedChangeListener((v,on)->prefs.edit().putBoolean("sound",on).apply()); panel.addView(sound);
         ScrollView scroll=new ScrollView(this); scroll.addView(panel);
         new AlertDialog.Builder(this).setTitle("Controles da aventura").setView(scroll).setPositiveButton("Pronto",null).show();
+    }
+    private void imageSettings() {
+        android.content.SharedPreferences prefs=getSharedPreferences("minish",MODE_PRIVATE);
+        LinearLayout panel=new LinearLayout(this); panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(24),dp(8),dp(24),dp(12));
+        panel.addView(text("Escolha o visual da aventura",17,GOLD));
+        RadioGroup modes=new RadioGroup(this);
+        String[] labels={"Pixel perfeito\nPixels nítidos e uniformes, fiéis à arte original.",
+            "Suave · Scale2x\nBordas mais arredondadas, sem borrar as cores."};
+        for(int n=0;n<labels.length;++n) {
+            RadioButton choice=new RadioButton(this); choice.setId(n+100);
+            choice.setText(labels[n]); choice.setTextColor(TEXT); choice.setTextSize(14);
+            choice.setPadding(0,dp(12),0,dp(12)); modes.addView(choice);
+        }
+        modes.check(prefs.getInt("pixel_mode",1)==0?100:101);
+        modes.setOnCheckedChangeListener((group,id)->{
+            prefs.edit().putInt("pixel_mode",id==100?0:1).apply(); update();
+        });
+        panel.addView(modes);
+        TextView help=text("A proporção original é preservada nos dois modos. A ampliação usa passos inteiros; algumas telas podem mostrar margens.\n\nVale na próxima partida. Para comparar durante o jogo: MENU → Graphics → Estilo dos pixels.",12,MUTED);
+        help.setPadding(0,dp(10),0,0); panel.addView(help);
+        ScrollView scroll=new ScrollView(this); scroll.addView(panel);
+        new AlertDialog.Builder(this).setTitle("Imagem e pixels").setView(scroll).setPositiveButton("Pronto",null).show();
     }
     private void slider(LinearLayout box,String label,String key,int min,int max,int fallback,String suffix) {
         android.content.SharedPreferences prefs=getSharedPreferences("minish",MODE_PRIVATE);

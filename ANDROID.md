@@ -21,6 +21,19 @@ A interface Android, o importador e os controles touch são deste fork.
    partida. O runtime também aceita controles físicos via SDL2; a validação
    de controle físico depende de um dispositivo compatível conectado.
    A mesma tela permite ligar ou silenciar o som para a próxima partida.
+7. **Imagem** oferece **Suave (Scale2x)**, ativado por padrão, e **Pixel
+   perfeito**. Suave arredonda contornos escolhendo cores da própria arte,
+   sem o borrado de interpolação bilinear. Pixel perfeito mantém os pixels
+   originais em blocos uniformes. Durante a partida, troque em **MENU →
+   Graphics → Estilo dos pixels**, com efeito imediato e escolha salva.
+
+Os dois estilos conservam a proporção original de 240×160. A ampliação usa
+passos inteiros: no modo Suave, também os subpixels do filtro têm tamanho
+uniforme. Isso pode deixar margens em telas com outras resoluções. No POCO
+2772×1280, ambos exibem o jogo em 1920×1280, centralizado. O filtro atua só
+na apresentação, depois da correção de cores; não altera ROM, save, raster
+do GBA ou hashes de estado. A interface e os controles permanecem nítidos.
+O filtro não se acumula sobre o raster HD opcional do upstream.
 
 O save normal do cartucho é local (`saves/minishcap.sav`, EEPROM de 8 KiB).
 Use **Exportar save** para guardar uma cópia fora do aplicativo. Estados
@@ -145,6 +158,22 @@ contador de misses do recompiler. FPS de guest não é taxa de atualização do
 painel. Qualquer ponte por interpretação/cache nativo deve ser reportada;
 nenhum teste curto prova cobertura estática de toda a campanha. O recurso de
 visão ampliada do upstream continua opcional e desligado por padrão.
+
+O adaptador em `cmake/AndroidRenderer.cmake` prepara cópias dos dois fontes
+de apresentação do motor, com âncoras exatas que exigem revisão quando o
+submódulo muda. O checkout original e o código derivado da ROM ficam
+intactos. `src/pixel_filter.h` implementa independentemente as regras
+publicadas de [Scale2x](https://www.scale2x.it/algorithm).
+
+O workflow também verifica os 512 padrões binários de vizinhança, bordas,
+cores RGB, escalas em várias resoluções e a saída real do renderer SDL por
+software, alternando os modos. Para executar esse teste sem ROM:
+
+```bash
+mkdir -p build/pixel-test
+g++ -std=c++17 -O2 -DMINISH_TEST_SDL -Isrc tests/pixel_filter_test.cpp src/pixel_presenter.cpp $(sdl2-config --cflags --libs) -o build/pixel-test/check
+SDL_VIDEODRIVER=dummy build/pixel-test/check
+```
 
 Para repetir o teste com interpretação/cache desativados, acrescente
 `--ez qa_strict true` ao comando que inicia a tela principal. Os registros

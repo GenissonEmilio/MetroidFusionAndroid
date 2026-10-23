@@ -6,6 +6,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ZeldaGameActivity extends GbaGameActivity {
+    // Called by the native settings menu on its game thread; preferences are thread-safe.
+    public void persistPixelMode(int mode) {
+        getSharedPreferences("minish",MODE_PRIVATE).edit().putInt("pixel_mode",mode==0?0:1).apply();
+    }
     @Override protected String[] getArguments() {
         SharedPreferences p=getSharedPreferences("minish",MODE_PRIVATE);
         ArrayList<String> args=new ArrayList<>(Arrays.asList(
@@ -16,6 +20,7 @@ public class ZeldaGameActivity extends GbaGameActivity {
             "--volume",p.getBoolean("sound",true)?"100":"0",
             "--touch-size",String.valueOf(p.getInt("touch_size",100)),
             "--touch-opacity",String.valueOf(p.getInt("touch_opacity",70)),
+            "--pixel-mode",String.valueOf(p.getInt("pixel_mode",1)),
             "variants/minishcap/game.toml"));
         // ADB QA builds alone expose the local observer and dummy audio sink.
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE)!=0

@@ -62,3 +62,33 @@ O lint mantém exceções restritas a caminhos opcionais do SDL (BLE/captura de
 
 Relatórios detalhados, capturas e dados privados de teste ficam ignorados em
 `artifacts/` na máquina de desenvolvimento; não são enviados ao repositório.
+
+## Atualização 0.1.1 — apresentação dos pixels
+
+No mesmo POCO, em 23 de outubro de 2026, com áudio de teste silenciado e
+execução estritamente estática:
+
+| Verificação | Resultado |
+|---|---|
+| Pixel perfeito, cena interna carregada por estado | 59,56 quadros de guest/s em 20,06 s |
+| Suave (Scale2x), mesma cena/estado | 59,19 quadros de guest/s em 20,07 s |
+| Cobertura nos dois testes | Zero misses e zero instruções interpretadas |
+| Geometria real | 1920×1280 centralizados na tela 2772×1280, proporção 3:2 |
+| Captura Pixel perfeito | Nenhum bloco 8×8 desigual na região central de teste |
+| Captura Suave | Nenhum subpixel 4×4 desigual; 654 blocos originais receberam contornos novos na região analisada |
+| Troca ao vivo | MENU → Graphics → Estilo dos pixels alterou o visual e persistiu `pixel_mode` nas preferências Android |
+| Entrada após troca de modo | Nove verificações touch passaram, incluindo diagonal + A e liberação dos ponteiros |
+
+São amostras curtas de desempenho, sem medir consumo ou estabilidade térmica
+em sessões longas. A suavização é apresentação Scale2x, não novos assets HD.
+O raster original do GBA e seus hashes não passam pelo filtro.
+
+O teste de imagem sem ROM passou para os 512 padrões de vizinhança,
+bordas de imagens estreitas, preservação das cores RGB e do buffer de entrada,
+escala inteira em múltiplas resoluções e comparação pixel a pixel da saída
+SDL por software ao alternar os dois estilos. O workflow executa esse teste.
+Os builds debug/release e `lintRelease` passaram.
+
+O validador de controles agora usa o contador monotônico do anel de entrada:
+carregar um estado pode voltar o número do frame sem apagar os eventos
+anteriores. Isso evita atribuir uma amostra antiga ao toque recém-injetado.

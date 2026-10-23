@@ -10,6 +10,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/generated/dispatch_table.cpp" OR
     message(FATAL_ERROR "Generate ROM and open BIOS first: tools/android/prepare.py --rom <USA.gba>")
 endif()
 add_subdirectory("${GBARECOMP_ROOT}" gbarecomp_build EXCLUDE_FROM_ALL)
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AndroidRenderer.cmake")
 file(GLOB MINISH_GENERATED CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/generated/*.cpp")
 add_library(main SHARED src/main.cpp src/game_config.cpp src/minish_extended_view.cpp
     src/mods/minish_adaptive_view_plugin.cpp src/android_port.cpp ${MINISH_GENERATED})

@@ -3,6 +3,8 @@
 #include "touch_input.h"
 #include "host_overlay.h"
 #include "recomp_runtime_ui.h"
+#include "pixel_presenter.h"
+#include <jni.h>
 #include <SDL.h>
 #include <algorithm>
 #include <cmath>
@@ -32,11 +34,33 @@ int menu_action(const char* key) {
     event.type=SDL_QUIT; SDL_PushEvent(&event);
     return 1;
 }
-const RecompRuntimeUiItem library_item{
+const char* const pixel_choices[]={"Pixel perfeito", "Suave (Scale2x)"};
+int menu_get(const char* key, int* value) {
+    if (!key || !value || std::string(key)!="minish.pixels") return 0;
+    *value=static_cast<int>(minish::pixel_mode()); return 1;
+}
+int menu_set(const char* key, int value) {
+    if (!key || std::string(key)!="minish.pixels" || value<0 || value>1) return 0;
+    minish::set_pixel_mode(static_cast<minish::PixelMode>(value));
+    auto* env=static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
+    auto activity=static_cast<jobject>(SDL_AndroidGetActivity());
+    if (env && activity) {
+        jclass cls=env->GetObjectClass(activity);
+        jmethodID save=env->GetMethodID(cls,"persistPixelMode","(I)V");
+        if (save) env->CallVoidMethod(activity,save,value);
+        env->DeleteLocalRef(cls); env->DeleteLocalRef(activity);
+    }
+    return 1;
+}
+const RecompRuntimeUiItem menu_items[]{ {
+    "minish.pixels", "Graphics", "Estilo dos pixels",
+    "Bordas suaves ou pixels originais. Ajuste salvo automaticamente.",
+    RECOMP_RUNTIME_UI_CHOICE,0,1,1,pixel_choices,2,nullptr
+}, {
     "minish.library", "System", "Voltar para o inicio",
     "Encerra a partida e volta para a biblioteca. O save do cartucho e preservado.",
     RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
-};
+} };
 struct Button { float x, y, w, h; int bit; const char* label; bool round; };
 struct Layout {
     float u, dx, dy;
@@ -139,8 +163,10 @@ void configure_android(gbarecomp::RunOptions& opts) {
     opts.expose_assist_tools=true;
     opts.save_state_slot_count=10;
     opts.diagnostic_replay_default=false;
-    opts.ui_extra_items=&library_item;
-    opts.ui_extra_item_count=1;
+    opts.ui_extra_items=menu_items;
+    opts.ui_extra_item_count=2;
+    opts.ui_get=&menu_get;
+    opts.ui_set=&menu_set;
     opts.ui_action=&menu_action;
 }
 }
@@ -157,12 +183,16 @@ extern "C" __attribute__((visibility("default"))) int SDL_main(int argc,char** a
     setvbuf(stdout,nullptr,_IOLBF,0);
     unsetenv("GBARECOMP_STRICT_STATIC");
     unsetenv("SDL_AUDIODRIVER");
+    minish::set_pixel_mode(minish::PixelMode::Smooth);
     std::vector<char*> args;
     for(int i=0;i<argc;++i) {
         if(std::string(argv[i])=="--touch-size" && i+1<argc) {
             scale=std::clamp(std::atoi(argv[++i])/100.f,.8f,1.3f);
         } else if(std::string(argv[i])=="--touch-opacity" && i+1<argc) {
             opacity=std::clamp(std::atoi(argv[++i])*255/100,65,240);
+        } else if(std::string(argv[i])=="--pixel-mode" && i+1<argc) {
+            minish::set_pixel_mode(std::string(argv[++i])=="0"?
+                minish::PixelMode::Perfect:minish::PixelMode::Smooth);
         } else if(std::string(argv[i])=="--qa-muted") {
             SDL_setenv("SDL_AUDIODRIVER","dummy",1);
         } else if(std::string(argv[i])=="--qa-strict") {
