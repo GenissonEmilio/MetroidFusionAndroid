@@ -7,3 +7,20 @@ size = 16384
 entry_pc = 0
 [identity]
 sha1 = "2e41f9d30ecdf1c4540edf89ac16f49bf327edb7"
+
+# entrypoint.s: exception_irq loads the cartridge handler into PC and sets LR
+# to this epilogue. It is an indirect return entry, not ordinary fallthrough.
+[[extra_func]]
+addr = 0x00000120
+mode = "arm"
+name = "open_bios_irq_return"
+
+# bios_calls/memory.s: CpuSet derives a 2-bit copy/fill + 16/32-bit index.
+# The four literal targets were checked against the pinned firmware bytes.
+[[jump_table]]
+addr = 0x00000254
+stride = 4
+count = 4
+format = "abs32"
+entries_mode = "arm"
+name = "open_bios_cpu_set_modes"

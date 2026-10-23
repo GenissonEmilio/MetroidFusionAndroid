@@ -1,0 +1,17 @@
+<lint>
+    <!-- SDL's optional BLE backend checks permission at initialization, which
+         lint cannot propagate into its callbacks. This app does not request
+         BLE access; standard Android gamepad input does not need it.
+         AudioRecord is an unused SDL capture path: we play audio only. -->
+    <issue id="MissingPermission">
+        <ignore path="**/org/libsdl/app/HIDDeviceBLESteamController.java" />
+        <ignore path="**/org/libsdl/app/HIDDeviceManager.java" />
+        <ignore path="**/org/libsdl/app/SDLAudioManager.java" />
+    </issue>
+    <!-- The generated compatibility patch supplies flags on API 33+, while
+         retaining the legacy overload only below API 33. Lint 8.7 flags that
+         unreachable-on-34 legacy branch as well. -->
+    <issue id="UnspecifiedRegisterReceiverFlag">
+        <ignore path="**/org/libsdl/app/HIDDeviceManager.java" />
+    </issue>
+</lint>

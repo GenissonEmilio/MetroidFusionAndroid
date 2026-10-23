@@ -11,6 +11,7 @@ ext.gbaGame = [
                   [from: rootProject.file('../mods/preloaded'), into: 'mods']]
 ]
 apply from: '../../gbarecomp/platform/android/gbarecomp-app.gradle'
+apply from: '../sdl-java.gradle'
 android {
     ndkVersion '28.2.13676358'
     externalNativeBuild.cmake.version '3.31.6'
@@ -18,5 +19,8 @@ android {
         manifest.srcFile 'src/main/AndroidManifest.xml'
         java.srcDir 'src/main/java'
     }
-    lint { disable 'ExpiredTargetSdkVersion' }
+    lint {
+        disable 'ExpiredTargetSdkVersion'
+        lintConfig rootProject.file('lint.xml')
+    }
 }

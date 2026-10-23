@@ -1,0 +1,29 @@
+// Apply a narrow Android 13+ receiver compatibility fix to a generated copy.
+// The pinned SDL submodule stays pristine; no hand-edited vendored Java.
+def sdlJavaSource = rootProject.file('../gbarecomp/platform/android/third_party/SDL/android-project/app/src/main/java')
+def patchedSdl = layout.buildDirectory.dir('generated/minishSdlJava')
+tasks.register('stageMinishSdlJava', Sync) {
+    from sdlJavaSource
+    into patchedSdl
+    doLast {
+        def manager = new File(patchedSdl.get().asFile, 'org/libsdl/app/HIDDeviceManager.java')
+        def content = new File(sdlJavaSource, 'org/libsdl/app/HIDDeviceManager.java').getText('UTF-8')
+        [mUsbBroadcast: 'RECEIVER_NOT_EXPORTED', mBluetoothBroadcast: 'RECEIVER_EXPORTED'].each { receiver, flag ->
+            def old = "mContext.registerReceiver(${receiver}, filter);"
+            if (content.count(old) != 1) throw new GradleException("SDL receiver patch no longer matches ${receiver}; review the pin")
+            def replacement = """if (android.os.Build.VERSION.SDK_INT >= 33) {
+            mContext.registerReceiver(${receiver}, filter, Context.${flag});
+        } else {
+            ${old}
+        }"""
+            content = content.replace(old, replacement)
+        }
+        manager.setText(content, 'UTF-8')
+    }
+}
+android.sourceSets.main.java.setSrcDirs([
+    patchedSdl,
+    rootProject.file('../gbarecomp/platform/android/java'),
+    file('src/main/java')
+])
+tasks.named('preBuild').configure { dependsOn 'stageMinishSdlJava' }
