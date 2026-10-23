@@ -16,9 +16,11 @@ A interface Android, o importador e os controles touch são deste fork.
    aceitam múltiplos toques ao mesmo tempo.
 5. **MENU**, Voltar do Android ou um toque com três dedos abre o menu do
    runtime, com pausa, estados rápidos e ajustes de apresentação/áudio.
+   **System → Voltar para o inicio** encerra a partida e retorna à biblioteca.
 6. **Controles**, na tela inicial, ajusta tamanho e opacidade para a próxima
    partida. O runtime também aceita controles físicos via SDL2; a validação
    de controle físico depende de um dispositivo compatível conectado.
+   A mesma tela permite ligar ou silenciar o som para a próxima partida.
 
 O save normal do cartucho é local (`saves/minishcap.sav`, EEPROM de 8 KiB).
 Use **Exportar save** para guardar uma cópia fora do aplicativo. Estados
@@ -67,6 +69,12 @@ O script de geração verifica hashes, aplica `symbols/minishcap_reviewed.toml`
 e conserva o mtime dos arquivos cujo conteúdo não mudou, para reaproveitar a
 compilação incremental. O corpus fica ignorado em `generated/`: não o envie
 ao Git. Nunca corrija o código gerado manualmente.
+
+A geração usa orçamento de 100.000 funções, acima do limite inicial de
+bring-up do motor. Isso permite concluir a descoberta automática de callbacks
+e continuações na RAM depois das raízes obrigatórias do Zelda; o orçamento
+anterior deixava código descoberto pendente. O script confere as continuações
+observadas em teste antes de substituir o corpus existente.
 
 Se preferir JDK e ferramentas host isolados:
 
@@ -129,6 +137,7 @@ automáticos. Builds de release ignoram esse sinalizador. Com a partida aberta:
 ```bash
 adb shell am start -n io.github.genissonemilio.minishcap/.ZeldaSetupActivity --ez qa true
 python3 tools/android/device_probe.py --seconds 20
+python3 tools/android/validate_touch.py
 ```
 
 O relatório compara quadros do jogo com tempo monotônico real e consulta o
@@ -136,6 +145,11 @@ contador de misses do recompiler. FPS de guest não é taxa de atualização do
 painel. Qualquer ponte por interpretação/cache nativo deve ser reportada;
 nenhum teste curto prova cobertura estática de toda a campanha. O recurso de
 visão ampliada do upstream continua opcional e desligado por padrão.
+
+Para repetir o teste com interpretação/cache desativados, acrescente
+`--ez qa_strict true` ao comando que inicia a tela principal. Os registros
+existentes do motor ficam em `files/diagnostics/native.log`, no armazenamento
+privado; builds de debug permitem consultá-los por `adb shell run-as`.
 
 As evidências do aparelho e as limitações observadas ficam em
 [VALIDATION_ANDROID.md](VALIDATION_ANDROID.md).

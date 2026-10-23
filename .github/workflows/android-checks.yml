@@ -26,5 +26,5 @@ jobs:
           java -cp build/import-test io.github.genissonemilio.minishcap.RomImporterTest
       - name: Check Python and shell entrypoints
         run: |
-          python3 -m py_compile tools/android/prepare.py tools/android/check_sources.py
+          python3 -m py_compile tools/android/*.py
           bash -n tools/android/build.sh

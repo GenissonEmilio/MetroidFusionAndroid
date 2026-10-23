@@ -2,10 +2,13 @@
 #include "runtime.h"
 #include "touch_input.h"
 #include "host_overlay.h"
+#include "recomp_runtime_ui.h"
 #include <SDL.h>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
+#include <fcntl.h>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -20,6 +23,20 @@ int opacity = 180;
 std::uint16_t pressed = 0;
 bool menu_was_down = false;
 bool stock_pad_visible = false;
+int menu_action(const char* key) {
+    if(!key || std::string(key)!="minish.library") return 0;
+    // Close the paused settings surface first so the loop can consume quit.
+    SDL_Event event{}; event.type=SDL_KEYDOWN;
+    event.key.keysym.sym=SDLK_AC_BACK; event.key.keysym.scancode=SDL_SCANCODE_AC_BACK;
+    SDL_PushEvent(&event); event.type=SDL_KEYUP; SDL_PushEvent(&event);
+    event.type=SDL_QUIT; SDL_PushEvent(&event);
+    return 1;
+}
+const RecompRuntimeUiItem library_item{
+    "minish.library", "System", "Voltar para o inicio",
+    "Encerra a partida e volta para a biblioteca. O save do cartucho e preservado.",
+    RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
+};
 struct Button { float x, y, w, h; int bit; const char* label; bool round; };
 struct Layout {
     float u, dx, dy;
@@ -122,6 +139,9 @@ void configure_android(gbarecomp::RunOptions& opts) {
     opts.expose_assist_tools=true;
     opts.save_state_slot_count=10;
     opts.diagnostic_replay_default=false;
+    opts.ui_extra_items=&library_item;
+    opts.ui_extra_item_count=1;
+    opts.ui_action=&menu_action;
 }
 }
 extern "C" __attribute__((visibility("default"))) int SDL_main(int argc,char** argv) {
@@ -129,6 +149,14 @@ extern "C" __attribute__((visibility("default"))) int SDL_main(int argc,char** a
     const char* root=SDL_AndroidGetInternalStoragePath();
     if(!root || chdir(root)) return 2;
     std::filesystem::create_directories("saves");
+    // Persist the runtime's existing diagnostics, including strict failures,
+    // without depending on Android's discarded native stdout/stderr streams.
+    std::filesystem::create_directories("diagnostics");
+    int log=open("diagnostics/native.log",O_WRONLY|O_CREAT|O_APPEND|O_TRUNC,0600);
+    if(log>=0) { dup2(log,STDOUT_FILENO); dup2(log,STDERR_FILENO); close(log); }
+    setvbuf(stdout,nullptr,_IOLBF,0);
+    unsetenv("GBARECOMP_STRICT_STATIC");
+    unsetenv("SDL_AUDIODRIVER");
     std::vector<char*> args;
     for(int i=0;i<argc;++i) {
         if(std::string(argv[i])=="--touch-size" && i+1<argc) {

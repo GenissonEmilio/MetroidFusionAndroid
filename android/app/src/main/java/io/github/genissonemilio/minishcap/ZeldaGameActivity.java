@@ -13,6 +13,7 @@ public class ZeldaGameActivity extends GbaGameActivity {
             "--bios",getFilesDir()+"/bios/open_gba_bios.firmware",
             "--save",getFilesDir()+"/saves/minishcap.sav",
             "--window","--bios-skip-intro",
+            "--volume",p.getBoolean("sound",true)?"100":"0",
             "--touch-size",String.valueOf(p.getInt("touch_size",100)),
             "--touch-opacity",String.valueOf(p.getInt("touch_opacity",70)),
             "variants/minishcap/game.toml"));

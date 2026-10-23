@@ -151,7 +151,12 @@ public class ZeldaSetupActivity extends Activity {
         panel.addView(text("Direcional: mover · A/B: ações\nL/R: ações secundárias · START: inventário\nMENU ou Voltar: pausa e estados rápidos\nControles Bluetooth/USB também são aceitos pelo runtime.",13,TEXT));
         slider(panel,"Tamanho", "touch_size",80,130,100,"%");
         slider(panel,"Opacidade", "touch_opacity",30,90,70,"%");
-        new AlertDialog.Builder(this).setTitle("Controles da aventura").setView(panel).setPositiveButton("Pronto",null).show();
+        android.content.SharedPreferences prefs=getSharedPreferences("minish",MODE_PRIVATE);
+        Switch sound=new Switch(this); sound.setText("Som na próxima partida"); sound.setTextColor(TEXT);
+        sound.setPadding(0,dp(12),0,dp(8)); sound.setChecked(prefs.getBoolean("sound",true));
+        sound.setOnCheckedChangeListener((v,on)->prefs.edit().putBoolean("sound",on).apply()); panel.addView(sound);
+        ScrollView scroll=new ScrollView(this); scroll.addView(panel);
+        new AlertDialog.Builder(this).setTitle("Controles da aventura").setView(scroll).setPositiveButton("Pronto",null).show();
     }
     private void slider(LinearLayout box,String label,String key,int min,int max,int fallback,String suffix) {
         android.content.SharedPreferences prefs=getSharedPreferences("minish",MODE_PRIVATE);

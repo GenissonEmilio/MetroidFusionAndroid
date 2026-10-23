@@ -70,7 +70,14 @@ def main():
         run("--bios", str(firmware), "--config", "config/open_bios.toml", "--out", str(staging / "bios"))
         run("--rom", str(rom), "--config", "symbols/minishcap.toml",
             "--config", "symbols/minishcap_reviewed.toml", "--symbols", "symbols/imported_symbols.tsv",
-            "--data-symbols", "symbols/imported_data_symbols.tsv", "--out", str(staging / "rom"))
+            "--data-symbols", "symbols/imported_data_symbols.tsv",
+            # Default 4096 is a bring-up budget. Required symbol closure already
+            # exceeds it, starving later automatic RAM/callback roots.
+            "--max-functions", "100000", "--out", str(staging / "rom"))
+        dispatch = (staging / "rom/dispatch_table.cpp").read_text()
+        for pc in ("0300643C", "030065A8"):
+            if f"0x{pc}u" not in dispatch:
+                raise ValueError(f"Missing observed RAM continuation {pc}; generation incomplete")
         publish_generated(staging / "bios", ROOT / "generated/open_bios")
         publish_generated(staging / "rom", ROOT / "generated")
 
