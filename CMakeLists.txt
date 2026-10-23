@@ -4,6 +4,10 @@ project(MinishCapRecomp C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(ANDROID)
+    include(cmake/Android.cmake)
+    return()
+endif()
 include(CTest)
 
 # Path to the platform core, consumed as a git submodule (junctioned locally

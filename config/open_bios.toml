@@ -1,0 +1,9 @@
+# Cult-of-GBA/BIOS a30e9a96: MIT-licensed replacement, NOT Nintendo BIOS.
+[program]
+name = "Cult of GBA open BIOS"
+id = "cult_gba_bios"
+load_address = 0
+size = 16384
+entry_pc = 0
+[identity]
+sha1 = "2e41f9d30ecdf1c4540edf89ac16f49bf327edb7"

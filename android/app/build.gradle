@@ -1,0 +1,22 @@
+plugins { id 'com.android.application' }
+ext.gbaGame = [
+    applicationId: 'io.github.genissonemilio.minishcap', versionCode: 1, versionName: '0.1.0',
+    title: 'Minish Cap', romSha1: ['b4bd50e4131b027c334547b4524e2dbbd4227130'],
+    romSize: 16777216, romFile: 'minishcap_usa.gba', variant: 'minishcap',
+    biosRequired: false, biosSha1: '2e41f9d30ecdf1c4540edf89ac16f49bf327edb7',
+    gameToml: rootProject.file('game_android.toml'), gameRoot: rootProject.file('..'),
+    engineRoot: rootProject.file('../gbarecomp'), recompUiRoot: rootProject.file('../recomp-ui'),
+    payloadVersion: '1', orientation: 'landscape', debugAbis: ['arm64-v8a'], nativeJobs: 2,
+    payloadDirs: [[from: rootProject.file('firmware'), into: 'bios'],
+                  [from: rootProject.file('../mods/preloaded'), into: 'mods']]
+]
+apply from: '../../gbarecomp/platform/android/gbarecomp-app.gradle'
+android {
+    ndkVersion '28.2.13676358'
+    externalNativeBuild.cmake.version '3.31.6'
+    sourceSets.main {
+        manifest.srcFile 'src/main/AndroidManifest.xml'
+        java.srcDir 'src/main/java'
+    }
+    lint { disable 'ExpiredTargetSdkVersion' }
+}

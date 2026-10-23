@@ -21,6 +21,9 @@
 
 #include "runtime.h"
 #include "minish_extended_view.h"
+#if defined(__ANDROID__)
+#include "android_port.h"
+#endif
 
 #if defined(GBAGAME_RECOMP_UI)
 #include "game_launcher_boot.h"
@@ -81,6 +84,9 @@ int main(int argc, char** argv) {
     opts.launcher_expose_adaptive_view = false;
     opts.launcher_region    = "USA";
     opts.launcher_game_config = "game.toml";   // prefill ROM/BIOS from [rom]/[bios]
+#if defined(__ANDROID__)
+    minish::configure_android(opts);
+#endif
     // Save: game.toml [save] has no explicit path — the runtime derives
     // <rom>.sav, and the launcher seam shows the same derivation.
 

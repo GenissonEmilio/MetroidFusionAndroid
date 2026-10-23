@@ -1,3 +1,22 @@
+# Android port — Minish Cap
+
+Este fork adiciona um aplicativo Android ARM64 com importação local de ROM
+`.gba`/`.zip`, controles touch em verde e dourado, ajuste de tamanho/opacidade,
+menu durante a partida e exportação do save do cartucho.
+
+Código-base: **mstan/MinishCapRecomp**, com o mesmo motor **gbarecomp** usado em
+**mstan/FireRedLeafGreenRecomp**. Não é uma conversão do código de Pokémon em Zelda.
+
+A BIOS substituta **Cult of GBA BIOS** (MIT) acompanha o aplicativo. O jogo,
+a BIOS proprietária da Nintendo e o código gerado da ROM não estão no Git.
+Importe sua própria cópia americana original de 16 MiB (SHA-1
+`b4bd50e4131b027c334547b4524e2dbbd4227130`).
+
+Veja [ANDROID.md](ANDROID.md) para instalação, compilação, limites e validação.
+As instruções abaixo pertencem à base upstream para desktop.
+
+---
+
 # MinishCapRecomp — The Legend of Zelda: The Minish Cap, Recompiled
 
 > _This recompilation is a **byproduct of developing

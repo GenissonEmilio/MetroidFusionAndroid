@@ -1,0 +1,141 @@
+# Minish Cap para Android
+
+Aplicativo independente para Android 9 ou mais recente, **ARM64**. O jogo é
+executado pelo gbarecomp a partir de um corpus C++ gerado para a versão USA.
+A interface Android, o importador e os controles touch são deste fork.
+
+## Instalação e uso
+
+1. Instale o APK ARM64 da seção Releases deste repositório.
+2. Toque em **Importar ROM** e escolha sua cópia `.gba` ou um `.zip` contendo
+   uma única ROM americana original, sem tradução ou patches.
+3. Após a confirmação, toque em **Jogar**. Uma cópia verificada fica no
+   armazenamento privado do aplicativo; o ZIP original pode ser removido.
+4. Direcional: movimento; A/B e L/R: botões do GBA; START/SELECT: os botões
+   correspondentes. Deslizar no direcional permite diagonais, e os botões
+   aceitam múltiplos toques ao mesmo tempo.
+5. **MENU**, Voltar do Android ou um toque com três dedos abre o menu do
+   runtime, com pausa, estados rápidos e ajustes de apresentação/áudio.
+6. **Controles**, na tela inicial, ajusta tamanho e opacidade para a próxima
+   partida. O runtime também aceita controles físicos via SDL2; a validação
+   de controle físico depende de um dispositivo compatível conectado.
+
+O save normal do cartucho é local (`saves/minishcap.sav`, EEPROM de 8 KiB).
+Use **Exportar save** para guardar uma cópia fora do aplicativo. Estados
+rápidos são separados desse save. Desinstalar o aplicativo apaga seus dados
+privados; uma atualização assinada com a mesma chave preserva esses dados.
+O processo de importação não envia sua ROM para servidores. O APK de release
+não solicita acesso à rede nem permissão geral de armazenamento.
+
+## Identidade dos dados
+
+| Arquivo | Tamanho | SHA-1 |
+|---|---:|---|
+| The Minish Cap (USA) | 16.777.216 | `b4bd50e4131b027c334547b4524e2dbbd4227130` |
+| Cult of GBA BIOS substituta | 16.384 | `2e41f9d30ecdf1c4540edf89ac16f49bf327edb7` |
+
+O APK contém a BIOS **aberta**, sob MIT, e seu aviso de licença. Não contém
+uma BIOS proprietária da Nintendo nem o arquivo ROM do jogo. A BIOS aberta
+tem um corpus separado e os vetores SWI/IRQ próprios; a configuração da BIOS
+original usada pelo upstream permanece disponível para desenvolvedores.
+
+Base: [MinishCapRecomp](https://github.com/mstan/MinishCapRecomp), commit
+`63993a51fb6c6410730c96f37cfb03f7e087c001`, e os submódulos fixados no Git.
+É a mesma família do [FireRedLeafGreenRecomp](https://github.com/mstan/FireRedLeafGreenRecomp)
+solicitado como referência. Os símbolos do Zelda vêm do trabalho do
+[zeldaret/tmc](https://github.com/zeldaret/tmc); não se usa o jogo Pokémon
+como substituto do código Zelda.
+
+## Compilação
+
+Dependências testadas: JDK 21, Python 3.11+, CMake/Ninja e compilador host C++20;
+Android SDK 35, build-tools 35.0.0, NDK 28.2.13676358 e CMake do SDK 3.31.6.
+O wrapper fixa Gradle 8.12 e o projeto fixa AGP 8.7.3.
+
+```bash
+git clone --recursive https://github.com/GenissonEmilio/ZeldaMinishCapAndroid.git
+cd ZeldaMinishCapAndroid
+cmake -S gbarecomp -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/host --target gba_recompile -j2
+python3 tools/android/prepare.py --rom '/caminho/MinishCap-USA.zip'
+export ANDROID_HOME='/caminho/android-sdk'
+tools/android/build.sh Release
+```
+
+O APK sai em `android/app/build/outputs/apk/release/app-release.apk`.
+O script de geração verifica hashes, aplica `symbols/minishcap_reviewed.toml`
+e conserva o mtime dos arquivos cujo conteúdo não mudou, para reaproveitar a
+compilação incremental. O corpus fica ignorado em `generated/`: não o envie
+ao Git. Nunca corrija o código gerado manualmente.
+
+Se preferir JDK e ferramentas host isolados:
+
+```bash
+docker build -t minishcap-tools -f tools/android/Dockerfile .
+docker run --rm --cpus=2 --user "$(id -u):$(id -g)" -e HOME=/tmp \
+  -v "$PWD:/src:z" -w /src minishcap-tools \
+  sh -c 'cmake -S gbarecomp -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build/host --target gba_recompile -j2'
+docker run --rm --cpus=2 --user "$(id -u):$(id -g)" -e HOME=/tmp \
+  -v "$PWD:/src:z" -w /src minishcap-tools \
+  python3 tools/android/prepare.py --rom roms/minishcap_usa.gba
+docker run --rm --cpus=2 --user "$(id -u):$(id -g)" -e HOME=/tmp \
+  -e ANDROID_HOME=/sdk -e ANDROID_USER_HOME=/src/artifacts/android-user-home \
+  -e GRADLE_USER_HOME=/src/artifacts/gradle-home \
+  -v "$PWD:/src:z" -v "$ANDROID_HOME:/sdk:z" -w /src minishcap-tools \
+  tools/android/build.sh Release
+```
+
+No Fedora, `:z` permite acesso do contêiner aos arquivos por SELinux. O Docker
+não recebe acesso USB; instalação e testes ADB acontecem no host.
+
+### Assinatura e atualizações
+
+Configure uma chave estável antes de distribuir. O template aceita
+`android/signing.local.properties` (ignorado no Git):
+
+```properties
+storeFile=/caminho/absoluto/minishcap.jks
+storePassword=SUA_SENHA
+keyAlias=minishcap
+keyPassword=SUA_SENHA
+```
+
+O caminho deve existir no ambiente que executa Gradle (dentro do contêiner,
+se for usado). Não compartilhe esse arquivo nem a chave. Guarde backup fora
+da pasta de build; perder a chave impede atualizar instalações existentes.
+Sem configuração, o template usa uma chave de debug e avisa no build.
+
+## Validação reproduzível
+
+O workflow `Android source validation` verifica a integridade do firmware,
+ausência de arquivos privados versionados, sintaxe dos scripts e o importador
+Java com entradas inválidas, ZIP truncado, tamanho/hash errados e limite de
+descompressão. Testes também verificam que falhas preservam a importação
+anterior e não deixam arquivos temporários. CI não recebe ROM nem BIOS Nintendo;
+o build completo requer que o proprietário forneça a ROM localmente.
+
+```bash
+python3 tools/android/check_sources.py
+mkdir -p build/import-test
+javac -d build/import-test android/app/src/main/java/io/github/genissonemilio/minishcap/RomImporter.java tools/android/RomImporterTest.java
+java -cp build/import-test io.github.genissonemilio.minishcap.RomImporterTest roms/minishcap_usa.gba
+python3 tools/android/audit_apk.py android/app/build/outputs/apk/release/app-release.apk
+```
+
+Builds de debug aceitam `--ez qa true` na Activity inicial. Esse modo habilita
+somente o observador local e direciona o áudio para saída dummy durante testes
+automáticos. Builds de release ignoram esse sinalizador. Com a partida aberta:
+
+```bash
+adb shell am start -n io.github.genissonemilio.minishcap/.ZeldaSetupActivity --ez qa true
+python3 tools/android/device_probe.py --seconds 20
+```
+
+O relatório compara quadros do jogo com tempo monotônico real e consulta o
+contador de misses do recompiler. FPS de guest não é taxa de atualização do
+painel. Qualquer ponte por interpretação/cache nativo deve ser reportada;
+nenhum teste curto prova cobertura estática de toda a campanha. O recurso de
+visão ampliada do upstream continua opcional e desligado por padrão.
+
+As evidências do aparelho e as limitações observadas ficam em
+[VALIDATION_ANDROID.md](VALIDATION_ANDROID.md).

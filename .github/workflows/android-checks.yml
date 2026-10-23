@@ -1,0 +1,30 @@
+name: Android source validation
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: python3 tools/android/check_sources.py
+      - name: Verify transactional ROM imports and bounded ZIP reads
+        run: |
+          mkdir -p build/import-test
+          javac -d build/import-test android/app/src/main/java/io/github/genissonemilio/minishcap/RomImporter.java tools/android/RomImporterTest.java
+          java -cp build/import-test io.github.genissonemilio.minishcap.RomImporterTest
+      - name: Check Python and shell entrypoints
+        run: |
+          python3 -m py_compile tools/android/prepare.py tools/android/check_sources.py
+          bash -n tools/android/build.sh

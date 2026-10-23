@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:glEsVersion="0x00020000" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+    <application android:allowBackup="false" android:hardwareAccelerated="true"
+        android:icon="@drawable/ic_crest" android:label="@string/app_name"
+        android:resizeableActivity="true" android:theme="@style/MinishTheme">
+        <meta-data android:name="gbarecomp.title" android:value="${gbaTitle}" />
+        <meta-data android:name="gbarecomp.rom_label" android:value="${gbaRomLabel}" />
+        <meta-data android:name="gbarecomp.rom_sha1" android:value="${gbaRomSha1}" />
+        <meta-data android:name="gbarecomp.rom_size" android:value="${gbaRomSize}" />
+        <meta-data android:name="gbarecomp.rom_file" android:value="${gbaRomFile}" />
+        <meta-data android:name="gbarecomp.bios_required" android:value="false" />
+        <meta-data android:name="gbarecomp.bios_sha1" android:value="${gbaBiosSha1}" />
+        <meta-data android:name="gbarecomp.orientation" android:value="landscape" />
+        <meta-data android:name="gbarecomp.payload_version" android:value="${gbaPayloadVersion}" />
+        <meta-data android:name="gbarecomp.setup_note" android:value="" />
+        <meta-data android:name="gbarecomp.gyro" android:value="false" />
+        <activity android:name=".ZeldaSetupActivity" android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ZeldaGameActivity" android:exported="false"
+            android:screenOrientation="sensorLandscape" android:launchMode="singleTask"
+            android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density"
+            android:preferMinimalPostProcessing="true" />
+    </application>
+</manifest>
