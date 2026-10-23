@@ -78,6 +78,8 @@ execução estritamente estática:
 | Captura Suave | Nenhum subpixel 4×4 desigual; 654 blocos originais receberam contornos novos na região analisada |
 | Troca ao vivo | MENU → Graphics → Estilo dos pixels alterou o visual e persistiu `pixel_mode` nas preferências Android |
 | Entrada após troca de modo | Nove verificações touch passaram, incluindo diagonal + A e liberação dos ponteiros |
+| APK final de release | Atualização instalada; modo Suave retomado, texto do menu sem corte e retorno à tela inicial funcionaram |
+| Dados existentes | ROM importada preservada e save de 8 KiB idêntico antes/depois dos testes |
 
 São amostras curtas de desempenho, sem medir consumo ou estabilidade térmica
 em sessões longas. A suavização é apresentação Scale2x, não novos assets HD.
@@ -92,3 +94,9 @@ Os builds debug/release e `lintRelease` passaram.
 O validador de controles agora usa o contador monotônico do anel de entrada:
 carregar um estado pode voltar o número do frame sem apagar os eventos
 anteriores. Isso evita atribuir uma amostra antiga ao toque recém-injetado.
+
+O retorno à biblioteca também passou a fechar o menu por sua ação de toggle:
+o comando Voltar pode apenas sair de uma seção selecionada, mantendo a pausa
+aberta e impedindo o consumo do evento de saída. O fluxo foi repetido no APK
+final sem depuração. A assinatura estável e o alinhamento APK de 16 KiB foram
+verificados; a auditoria não encontrou ROM ou chaves no pacote.

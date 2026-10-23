@@ -27,10 +27,11 @@ bool menu_was_down = false;
 bool stock_pad_visible = false;
 int menu_action(const char* key) {
     if(!key || std::string(key)!="minish.library") return 0;
-    // Close the paused settings surface first so the loop can consume quit.
-    SDL_Event event{}; event.type=SDL_KEYDOWN;
-    event.key.keysym.sym=SDLK_AC_BACK; event.key.keysym.scancode=SDL_SCANCODE_AC_BACK;
-    SDL_PushEvent(&event); event.type=SDL_KEYUP; SDL_PushEvent(&event);
+    // Guide closes the entire menu; Back may only leave a selected section.
+    // The paused presentation loop must close before it can consume quit.
+    SDL_Event event{}; event.type=SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button=SDL_CONTROLLER_BUTTON_GUIDE;
+    SDL_PushEvent(&event); event.type=SDL_CONTROLLERBUTTONUP; SDL_PushEvent(&event);
     event.type=SDL_QUIT; SDL_PushEvent(&event);
     return 1;
 }
