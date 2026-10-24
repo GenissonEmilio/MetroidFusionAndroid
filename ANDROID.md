@@ -26,6 +26,33 @@ A interface Android, o importador e os controles touch são deste fork.
    sem o borrado de interpolação bilinear. Pixel perfeito mantém os pixels
    originais em blocos uniformes. Durante a partida, troque em **MENU →
    Graphics → Estilo dos pixels**, com efeito imediato e escolha salva.
+8. **Câmera / PRINT**, durante a partida, guarda um PNG da imagem do jogo,
+   sem controles ou menu do port por cima. O processamento do PNG acontece
+   fora da thread do jogo. Aguarde a confirmação **Local marcado no álbum**.
+9. O inventário original aberto por **START** ganha a aba **ÁLBUM**, no
+   lugar do controle SELECT (não usado nesse menu). Ela aparece apenas nas
+   páginas estáveis do inventário e respeita os bloqueios normais da história.
+   Também há acesso por **MENU → Album → Abrir album de Hyrule**, ou pela
+   tela inicial. Voltar fecha o álbum e retoma a mesma partida/menu.
+
+O **Álbum de Hyrule** mostra miniaturas, imagem ampliada, título, data e
+anotações. Use dois dedos para ampliar, arraste para explorar ou dê dois
+toques para ampliar/restaurar. **Anotar** nomeia o local e registra o que
+revisitar; **Exportar PNG** usa o seletor Android para guardar uma cópia;
+**Excluir** pede confirmação. Até 200 capturas ficam no diretório privado
+`captures/`, separado do save. Nenhuma captura antiga é apagada automaticamente.
+Atualizações assinadas conservam imagens e notas. Para guardar imagens fora
+dos dados do aplicativo, exporte os PNGs antes de desinstalar.
+
+Os controles usam ícones vetoriais originais de espada, escudo, pena, gorro,
+mapa, bolsa e brasão. As letras A/B/L/R continuam visíveis; os ícones são
+decorativos e não mudam os itens equipados ou as funções originais dos botões.
+
+A integração ao menu original é uma **extensão visual do port**. O Android
+desenha a aba sobre o inventário e abre sua própria galeria. O estado do
+menu é apenas lido das estruturas USA, verificadas contra a referência
+`zeldaret/tmc` fixada; o port não reescreve o código do menu na ROM nem
+desbloqueia o inventário durante cenas que o jogo mantém bloqueadas.
 
 Os dois estilos conservam a proporção original de 240×160. A ampliação usa
 passos inteiros: no modo Suave, também os subpixels do filtro têm tamanho
@@ -173,6 +200,16 @@ software, alternando os modos. Para executar esse teste sem ROM:
 mkdir -p build/pixel-test
 g++ -std=c++17 -O2 -DMINISH_TEST_SDL -Isrc tests/pixel_filter_test.cpp src/pixel_presenter.cpp $(sdl2-config --cflags --libs) -o build/pixel-test/check
 SDL_VIDEODRIVER=dummy build/pixel-test/check
+```
+
+Esse teste também confere a captura antes das camadas de interface e o
+reconhecimento restrito do inventário. A persistência do álbum pode ser
+validada sem Android nem ROM:
+
+```bash
+mkdir -p build/album-test
+javac -d build/album-test android/app/src/main/java/io/github/genissonemilio/minishcap/CaptureStore.java tools/android/CaptureStoreTest.java
+java -cp build/album-test io.github.genissonemilio.minishcap.CaptureStoreTest
 ```
 
 Para repetir o teste com interpretação/cache desativados, acrescente

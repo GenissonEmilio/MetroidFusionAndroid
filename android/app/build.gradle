@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 ext.gbaGame = [
-    applicationId: 'io.github.genissonemilio.minishcap', versionCode: 2, versionName: '0.1.1',
+    applicationId: 'io.github.genissonemilio.minishcap', versionCode: 3, versionName: '0.2.0',
     title: 'Minish Cap', romSha1: ['b4bd50e4131b027c334547b4524e2dbbd4227130'],
     romSize: 16777216, romFile: 'minishcap_usa.gba', variant: 'minishcap',
     biosRequired: false, biosSha1: '2e41f9d30ecdf1c4540edf89ac16f49bf327edb7',

@@ -5,6 +5,9 @@
 namespace minish {
 PixelMode pixel_mode();
 void set_pixel_mode(PixelMode mode);
+using CaptureSink = void (*)(const std::uint8_t*, int, int);
+void set_capture_sink(CaptureSink sink);
+bool request_capture();
 
 // Owned by HostWindow's backend; close() runs before SDL destroys the renderer.
 class PixelPresenter {

@@ -4,6 +4,10 @@
 #include "host_overlay.h"
 #include "recomp_runtime_ui.h"
 #include "pixel_presenter.h"
+#include "zelda_icons.h"
+#include "album_context.h"
+#include "runtime_bus_bridge.h"
+#include "gba_bus.h"
 #include <jni.h>
 #include <SDL.h>
 #include <algorithm>
@@ -24,14 +28,61 @@ float scale = 1.0f;
 int opacity = 180;
 std::uint16_t pressed = 0;
 bool menu_was_down = false;
+bool capture_was_down = false,album_was_down = false;
 bool stock_pad_visible = false;
+bool inventory_open() {
+    const auto* bus=gbarecomp::active_bus();
+    if(!bus) return false;
+    const auto* i=bus->iwram_ptr(); const auto* e=bus->ewram_ptr();
+    return minish::album_in_inventory({i[0x1002],i[0x1003],i[0x1004],
+        e[0x32EC0],e[0x32EC2],e[0x344A1],e[0x34491]});
+}
+void java_action(const char* name) {
+    auto* env=static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
+    auto activity=static_cast<jobject>(SDL_AndroidGetActivity());
+    if(env && activity) {
+        auto cls=env->GetObjectClass(activity);
+        auto method=env->GetMethodID(cls,name,"()V");
+        if(method) env->CallVoidMethod(activity,method);
+        env->DeleteLocalRef(cls);env->DeleteLocalRef(activity);
+    }
+}
+void capture_frame(const std::uint8_t* rgb,int w,int h) {
+    if(w<1 || h<1 || w>1024 || h>1024) return;
+    auto* env=static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
+    auto activity=static_cast<jobject>(SDL_AndroidGetActivity());
+    if(!env || !activity) return;
+    auto cls=env->GetObjectClass(activity);
+    auto method=env->GetMethodID(cls,"captureFrame","([BIIIIII)V");
+    jbyteArray data=env->NewByteArray(w*h*3);
+    if(method && data) {
+        env->SetByteArrayRegion(data,0,w*h*3,reinterpret_cast<const jbyte*>(rgb));
+        int area=-1,room=-1,x=-1,y=-1;
+        if(const auto* bus=gbarecomp::active_bus();bus && bus->iwram_ptr()[0x1002]==2) {
+            const auto* i=bus->iwram_ptr();const auto* e=bus->ewram_ptr();
+            const auto* location=i+0xBF0;
+            if(i[0x1004]==7) location=e+0x32EDC; // UI backup while a subtask owns RAM.
+            area=location[4];room=location[5];
+            if(i[0x1004]!=7) { x=i[0x118E]|(i[0x118F]<<8);y=i[0x1192]|(i[0x1193]<<8); }
+        }
+        env->CallVoidMethod(activity,method,data,w,h,area,room,x,y);
+    }
+    if(data) env->DeleteLocalRef(data);
+    env->DeleteLocalRef(cls);env->DeleteLocalRef(activity);
+}
+void close_runtime_menu() {
+    SDL_Event event{};event.type=SDL_CONTROLLERBUTTONDOWN;
+    event.cbutton.button=SDL_CONTROLLER_BUTTON_GUIDE;
+    SDL_PushEvent(&event);event.type=SDL_CONTROLLERBUTTONUP;SDL_PushEvent(&event);
+}
 int menu_action(const char* key) {
-    if(!key || std::string(key)!="minish.library") return 0;
+    if(!key) return 0;
+    if(std::string(key)=="minish.capture") { minish::request_capture();close_runtime_menu();return 1; }
+    if(std::string(key)=="minish.album") { close_runtime_menu();java_action("showAlbum");return 1; }
+    if(std::string(key)!="minish.library") return 0;
     // Guide closes the entire menu; Back may only leave a selected section.
     // The paused presentation loop must close before it can consume quit.
-    SDL_Event event{}; event.type=SDL_CONTROLLERBUTTONDOWN;
-    event.cbutton.button=SDL_CONTROLLER_BUTTON_GUIDE;
-    SDL_PushEvent(&event); event.type=SDL_CONTROLLERBUTTONUP; SDL_PushEvent(&event);
+    close_runtime_menu();SDL_Event event{};
     event.type=SDL_QUIT; SDL_PushEvent(&event);
     return 1;
 }
@@ -54,6 +105,14 @@ int menu_set(const char* key, int value) {
     return 1;
 }
 const RecompRuntimeUiItem menu_items[]{ {
+    "minish.capture", "Album", "Marcar local (print)",
+    "Guarda a imagem limpa do jogo no album deste aparelho.",
+    RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
+}, {
+    "minish.album", "Album", "Abrir album de Hyrule",
+    "Veja as capturas e anote os locais que deseja revisitar.",
+    RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
+}, {
     "minish.pixels", "Graphics", "Estilo dos pixels",
     "Bordas suaves ou pixels originais. Ajuste salvo automaticamente.",
     RECOMP_RUNTIME_UI_CHOICE,0,1,1,pixel_choices,2,nullptr
@@ -67,7 +126,8 @@ struct Layout {
     float u, dx, dy;
     std::vector<Button> buttons;
 };
-Layout layout(float w, float h, int left, int top, int right, int bottom) {
+Layout layout(float w, float h, int left, int top, int right, int bottom,
+              const PresentationLayout& game={}) {
     const float u = std::min(h / 5.5f, w / 12.0f) * scale;
     const float pad = std::max(12.f, u * .12f);
     const float x0 = left + pad, x1 = w - right - pad;
@@ -81,8 +141,14 @@ Layout layout(float w, float h, int left, int top, int right, int bottom) {
         {w*.56f, y1-u*.24f, u*.95f, u*.42f, 3, "START", false},
         {x1-u*.65f, y0+u*.27f, u*1.3f, u*.53f, 8, "R", false},
         {x0+u*.65f, y0+u*.27f, u*1.3f, u*.53f, 9, "L", false},
-        {w*.5f, y0+u*.24f, u*1.05f, u*.48f, -1, "MENU", false}
+        {w*.5f, y0+u*.24f, u*1.05f, u*.48f, -1, "MENU", false},
+        {w*.62f, y0+u*.24f, u*.76f, u*.48f, -2, "PRINT", false}
     };
+    if(game.width>0 && inventory_open()) {
+        // The inventory does not use SELECT. Its safe-area slot becomes a
+        // journal tab while START and all actual inventory controls remain.
+        for(auto& b:l.buttons) if(b.bit==2) { b.bit=-3;b.label="ALBUM"; }
+    }
     return l;
 }
 bool contains(const Button& b, float x, float y) {
@@ -92,15 +158,15 @@ bool contains(const Button& b, float x, float y) {
 std::uint16_t input(const TouchFrameInfo* f) {
     pressed = 0;
     stock_pad_visible = f && f->pad_visible;
-    if (!f || stock_pad_visible) { menu_was_down = false; return 0x3ff; }
+    if (!f) { menu_was_down=capture_was_down=album_was_down=false;return 0x3ff; }
     auto l = layout(f->drawable_width, f->drawable_height, f->safe_insets.left,
-        f->safe_insets.top, f->safe_insets.right, f->safe_insets.bottom);
-    bool menu = false;
+        f->safe_insets.top, f->safe_insets.right, f->safe_insets.bottom,f->game_rect);
+    bool menu=false,capture=false,album=false;
     for (std::size_t i=0; i<f->point_count; ++i) {
         const auto& p=f->points[i];
         float x=p.drawable_x-l.dx, y=p.drawable_y-l.dy;
         // Sliding between directions and diagonals works without lifting.
-        if (std::abs(x)<l.u && std::abs(y)<l.u) {
+        if (!stock_pad_visible && std::abs(x)<l.u && std::abs(y)<l.u) {
             const float dead=l.u*.16f;
             if (x>dead && std::abs(y)<std::abs(x)*2.5f) pressed|=1<<4;
             if (x<-dead && std::abs(y)<std::abs(x)*2.5f) pressed|=1<<5;
@@ -108,7 +174,10 @@ std::uint16_t input(const TouchFrameInfo* f) {
             if (y>dead && std::abs(x)<std::abs(y)*2.5f) pressed|=1<<7;
         }
         for (const auto& b:l.buttons) if (contains(b,p.drawable_x,p.drawable_y)) {
-            if (b.bit>=0) pressed |= 1<<b.bit; else menu=true;
+            if(b.bit>=0) { if(!stock_pad_visible) pressed |= 1<<b.bit; }
+            else if(b.bit==-1 && !stock_pad_visible) menu=true;
+            else if(b.bit==-2) capture=true;
+            else if(b.bit==-3) album=true;
         }
     }
     if (menu && !menu_was_down) {
@@ -117,28 +186,37 @@ std::uint16_t input(const TouchFrameInfo* f) {
         e.type=SDL_KEYUP; SDL_PushEvent(&e);
     }
     menu_was_down=menu;
+    if(capture && !capture_was_down) minish::request_capture();
+    if(album && !album_was_down) java_action("showAlbum");
+    capture_was_down=capture;album_was_down=album;
     return 0x3ff & ~pressed;
 }
 OverlayColor gold{225,199,119,220}, ink{8,33,27,180}, light{209,242,217,255};
 void draw(HostOverlay* o) {
-    if (!o || stock_pad_visible || TouchHub::instance().presentation().drawable_width<=0) return;
+    if (!o || TouchHub::instance().presentation().drawable_width<=0) return;
     // The engine's optional stock pad takes over when its toggle is enabled.
     // The last frame's input mask is presentation feedback only.
     auto l=layout(o->drawable_width(),o->drawable_height(),o->safe_insets().left,
-        o->safe_insets().top,o->safe_insets().right,o->safe_insets().bottom);
+        o->safe_insets().top,o->safe_insets().right,o->safe_insets().bottom,o->game_rect());
     auto bg=ink; bg.a=opacity;
     const float u=l.u, t=std::max(2.f,u*.012f);
+    if(!stock_pad_visible) {
     o->fill_circle(l.dx,l.dy,u*.98f,{8,23,20,(std::uint8_t)(opacity*.55f)},space);
     o->fill_rect(l.dx-u*.32f,l.dy-u*.89f,u*.64f,u*1.78f,u*.09f,bg,space);
     o->fill_rect(l.dx-u*.89f,l.dy-u*.32f,u*1.78f,u*.64f,u*.09f,bg,space);
-    const char* labels[]={">","<","^","v"};
     const float xs[]={.65f,-.65f,0,0}, ys[]={0,0,-.65f,.65f};
     for(int i=0;i<4;++i) {
         auto c=(pressed&(1<<(i+4)))?light:gold;
-        o->text(l.dx+xs[i]*u,l.dy+ys[i]*u-u*.12f,u*.24f,c,labels[i],OverlayAlign::Center,space);
+        const float x=l.dx+xs[i]*u,y=l.dy+ys[i]*u;
+        const float vx=xs[i]==0?1:0,vy=ys[i]==0?1:0;
+        o->line(x-xs[i]*u*.13f+vx*u*.1f,y-ys[i]*u*.13f+vy*u*.1f,x,y,t*2,c,space);
+        o->line(x,y,x-xs[i]*u*.13f-vx*u*.1f,y-ys[i]*u*.13f-vy*u*.1f,t*2,c,space);
     }
     o->stroke_circle(l.dx,l.dy,u*.18f,t,gold,space);
+    minish::draw_icon(o,minish::Icon::Crest,l.dx,l.dy,u*.24f,space);
+    }
     for(const auto& b:l.buttons) {
+        if(stock_pad_visible && b.bit>=-1) continue;
         const bool down=b.bit>=0 && (pressed&(1<<b.bit));
         auto c=down?OverlayColor{57,116,77,(std::uint8_t)opacity}:bg;
         if(b.round) {
@@ -149,13 +227,28 @@ void draw(HostOverlay* o) {
             o->fill_rect(b.x-b.w/2,b.y-b.h/2,b.w,b.h,b.h*.3f,c,space);
             o->stroke_rect(b.x-b.w/2,b.y-b.h/2,b.w,b.h,b.h*.3f,t,gold,space);
         }
-        float fs=u*(b.round?.35f:.16f);
-        o->text(b.x,b.y-fs*.5f,fs,light,b.label,OverlayAlign::Center,space);
+        using minish::Icon;
+        Icon icon=Icon::Crest;
+        switch(b.bit) {
+        case 0:icon=Icon::Sword;break;case 1:icon=Icon::Shield;break;
+        case 2:icon=Icon::Map;break;case 3:icon=Icon::Pouch;break;
+        case 8:icon=Icon::Cap;break;case 9:icon=Icon::Feather;break;
+        case -2:icon=Icon::Camera;break;case -3:icon=Icon::Album;break;
+        }
+        const float size=b.round?u*.7f:b.h*.5f;
+        minish::draw_icon(o,icon,b.round?b.x:b.x-b.w*.3f,b.y,size,space);
+        if(b.round) {
+            o->fill_circle(b.x+b.w*.32f,b.y+b.h*.3f,u*.15f,{15,49,34,245},space);
+            o->text(b.x+b.w*.32f,b.y+b.h*.3f-u*.11f,u*.22f,light,b.label,OverlayAlign::Center,space);
+        } else {
+            o->text(b.x+b.w*.18f,b.y-u*.06f,u*.12f,light,b.label,OverlayAlign::Center,space);
+        }
     }
 }
 }
 namespace minish {
 void configure_android(gbarecomp::RunOptions& opts) {
+    minish::set_capture_sink(&capture_frame);
     opts.input_frame=&input; opts.host_overlay=&draw;
     opts.touch_pad_default=0;
     opts.touch_gesture_claims=gbarecomp::kTouchClaimLongPress;
@@ -165,7 +258,7 @@ void configure_android(gbarecomp::RunOptions& opts) {
     opts.save_state_slot_count=10;
     opts.diagnostic_replay_default=false;
     opts.ui_extra_items=menu_items;
-    opts.ui_extra_item_count=2;
+    opts.ui_extra_item_count=4;
     opts.ui_get=&menu_get;
     opts.ui_set=&menu_set;
     opts.ui_action=&menu_action;

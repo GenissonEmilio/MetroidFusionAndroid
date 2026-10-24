@@ -2,7 +2,9 @@
 
 Este fork adiciona um aplicativo Android ARM64 com importação local de ROM
 `.gba`/`.zip`, controles touch em verde e dourado, ajuste de tamanho/opacidade,
-menu durante a partida e exportação do save do cartucho.
+menu durante a partida e exportação do save do cartucho. Inclui estilos de
+pixel, ícones temáticos nos controles e um álbum com capturas, zoom e
+anotações, acessível também pelo inventário aberto por START.
 
 Código-base: **mstan/MinishCapRecomp**, com o mesmo motor **gbarecomp** usado em
 **mstan/FireRedLeafGreenRecomp**. Não é uma conversão do código de Pokémon em Zelda.

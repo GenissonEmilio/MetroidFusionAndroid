@@ -29,5 +29,8 @@
             android:screenOrientation="sensorLandscape" android:launchMode="singleTask"
             android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density"
             android:preferMinimalPostProcessing="true" />
+        <activity android:name=".ZeldaAlbumActivity" android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>
 </manifest>

@@ -1,4 +1,5 @@
 #include "pixel_filter.h"
+#include "album_context.h"
 #include <array>
 #include <iostream>
 #include <stdexcept>
@@ -77,6 +78,11 @@ void check_layout() {
 }
 
 #if defined(MINISH_TEST_SDL)
+std::vector<std::uint8_t> captured;
+int capture_width=0,capture_height=0;
+void capture_sink(const std::uint8_t* rgb,int w,int h) {
+    captured.assign(rgb,rgb+w*h*3);capture_width=w;capture_height=h;
+}
 void check_renderer() {
     check(SDL_Init(SDL_INIT_VIDEO)==0,SDL_GetError());
     SDL_Surface* surface=SDL_CreateRGBSurfaceWithFormat(0,960,640,24,SDL_PIXELFORMAT_RGB24);
@@ -94,10 +100,15 @@ void check_renderer() {
     check(SDL_UpdateTexture(original,nullptr,input.data(),240*3)==0,SDL_GetError());
     minish::scale2x_rgb24(input.data(),240,160,scaled);
     minish::PixelPresenter presenter;
+    minish::set_capture_sink(capture_sink);
     for (int trial=0;trial<6;++trial) {
         const bool smooth=trial%2;
         minish::set_pixel_mode(smooth?minish::PixelMode::Smooth:minish::PixelMode::Perfect);
+        check(minish::request_capture(),"Capture request was rejected");
+        check(!minish::request_capture(),"Repeated requests not coalesced");
         presenter.present(renderer,original,input.data(),240,160,{0,0,960,640});
+        check(capture_width==(smooth?480:240) && capture_height==(smooth?320:160),"Capture dimensions");
+        check(captured==(smooth?scaled:input),"Capture is not the clean displayed game image");
         std::vector<std::uint8_t> actual(960*640*3);
         check(SDL_RenderReadPixels(renderer,nullptr,SDL_PIXELFORMAT_RGB24,actual.data(),960*3)==0,
             SDL_GetError());
@@ -107,6 +118,7 @@ void check_renderer() {
         }
     }
     presenter.close(); presenter.close();
+    minish::set_capture_sink(nullptr);
     SDL_DestroyTexture(original); SDL_DestroyRenderer(renderer); SDL_FreeSurface(surface);
     SDL_Quit();
 }
@@ -114,6 +126,12 @@ void check_renderer() {
 
 int main() {
     check_filter(); check_layout();
+    const minish::MenuSnapshot inventory{2,2,7,2,1,2,1};
+    check(minish::album_in_inventory(inventory),"Inventory context not recognized");
+    for(int field=0;field<7;++field) {
+        auto altered=inventory;auto* bytes=reinterpret_cast<std::uint8_t*>(&altered);
+        bytes[field]=0;check(!minish::album_in_inventory(altered),"Album appears outside inventory");
+    }
 #if defined(MINISH_TEST_SDL)
     check_renderer();
 #endif

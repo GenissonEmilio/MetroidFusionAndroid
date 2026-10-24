@@ -31,6 +31,11 @@ jobs:
           mkdir -p build/import-test
           javac -d build/import-test android/app/src/main/java/io/github/genissonemilio/minishcap/RomImporter.java tools/android/RomImporterTest.java
           java -cp build/import-test io.github.genissonemilio.minishcap.RomImporterTest
+      - name: Verify private album persistence and limits
+        run: |
+          mkdir -p build/album-test
+          javac -d build/album-test android/app/src/main/java/io/github/genissonemilio/minishcap/CaptureStore.java tools/android/CaptureStoreTest.java
+          java -cp build/album-test io.github.genissonemilio.minishcap.CaptureStoreTest
       - name: Check Python and shell entrypoints
         run: |
           python3 -m py_compile tools/android/*.py

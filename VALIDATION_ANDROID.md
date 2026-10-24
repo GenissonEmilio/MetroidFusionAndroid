@@ -100,3 +100,47 @@ o comando Voltar pode apenas sair de uma seção selecionada, mantendo a pausa
 aberta e impedindo o consumo do evento de saída. O fluxo foi repetido no APK
 final sem depuração. A assinatura estável e o alinhamento APK de 16 KiB foram
 verificados; a auditoria não encontrou ROM ou chaves no pacote.
+
+## Atualização 0.2.0 — controles e álbum
+
+Validação em 24 de outubro de 2026, no mesmo POCO, com QA silenciado:
+
+- Controles redesenhados com vetores originais, conservando os alvos A/B,
+  direcional, L/R e START. Nove verificações de entrada passaram, incluindo
+  diagonal + A e soltura sem botão preso.
+- 59,45 quadros de guest/s em 20,07 segundos, com os novos controles e uma
+  captura durante a medição; execução estritamente estática, zero misses e
+  zero instruções interpretadas no trecho.
+- Câmera física por ADB gerou PNG 480×320 no modo Suave, sem botões do port
+  por cima. Título e nota foram salvos pela interface e sobreviveram à
+  atualização assinada e à reabertura do aplicativo.
+- Exportação pelo seletor Android produziu 30.982 bytes idênticos à captura
+  privada (SHA-256 `1787148feb8e2780dd6f910648554573cb5c7a8a40eeb93b76e4b1ad05b6c1f6`).
+- Miniaturas, ampliação por dois toques e retorno ao inventário foram
+  conferidos em capturas do aparelho. Durante a galeria, o frame de guest
+  permaneceu em 42.529 nas duas consultas separadas por um segundo.
+
+A aba no menu original é uma extensão visual; sua condição foi conferida
+contra o estado real do jogo: `gMain` em tarefa 2/estado 2/subestado 7,
+`gUI` em fase 2/subtask 1 e `gPauseMenuOptions` em fase 2/página 1.
+A cena inicial usada em QA ainda bloqueia o inventário por não ter itens.
+Para testar a interface original sem avançar a história do proprietário,
+o cenário de teste habilitou temporariamente `gSave.inventory[0]` pela
+ferramenta de debug e acionou START normalmente. Essa alteração existe só
+no cenário de teste; o produto lê o estado, não escreve a flag. Save e
+retomada originais são restaurados após esse teste.
+
+Os testes sem ROM verificam a captura antes das camadas de interface, a
+coalescência de solicitações, as condições do menu, a persistência de notas
+Unicode, os limites de imagem/200 entradas, a rejeição de IDs inválidos e
+a separação do arquivo de save. O armazenamento publica o PNG apenas depois
+da escrita dos metadados, e falhas não deixam uma entrada parcial visível.
+As mesmas verificações fazem parte do workflow de fontes.
+
+O fluxo final foi repetido com a aba na área segura do antigo SELECT,
+sem sobrepor START. Os acessos pelo inventário, pelo menu do runtime e
+pela tela inicial abriram a mesma galeria. A ação de captura no menu
+retornou à partida e publicou um novo PNG. A exclusão exigiu confirmação,
+atualizou a lista e chegou ao estado vazio; apenas as três imagens criadas
+pelo QA foram removidas. O save e a retomada do proprietário foram
+restaurados e conferidos byte a byte, encerrando o cenário modificado de QA.

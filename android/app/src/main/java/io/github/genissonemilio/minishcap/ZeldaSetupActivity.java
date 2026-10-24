@@ -76,7 +76,12 @@ public class ZeldaSetupActivity extends Activity {
         progress.setIndeterminate(true); progress.setVisibility(View.GONE); card.addView(progress);
         play=button("Jogar",true,this::launchGame); card.addView(play);
         importButton=button("Importar ROM  ·  .gba ou .zip",false,this::pickRom); card.addView(importButton);
-        imageButton=button("Imagem",false,this::imageSettings); card.addView(imageButton);
+        imageButton=button("Imagem",false,this::imageSettings);
+        LinearLayout extras=new LinearLayout(this);
+        LinearLayout.LayoutParams extraHalf=new LinearLayout.LayoutParams(0,dp(49),1);extraHalf.rightMargin=dp(8);extraHalf.bottomMargin=dp(10);
+        extras.addView(imageButton,extraHalf);
+        extras.addView(button("Álbum de Hyrule",false,()->startActivity(new Intent(this,ZeldaAlbumActivity.class))),
+            new LinearLayout.LayoutParams(0,dp(49),1));card.addView(extras);
         LinearLayout row=new LinearLayout(this);
         Button controls=button("Controles",false,this::controls);
         Button save=button("Exportar save",false,this::exportSave);
@@ -151,7 +156,7 @@ public class ZeldaSetupActivity extends Activity {
     }
     private void controls() {
         LinearLayout panel=new LinearLayout(this); panel.setOrientation(LinearLayout.VERTICAL); panel.setPadding(dp(24),dp(8),dp(24),0);
-        panel.addView(text("Direcional: mover · A/B: ações\nL/R: ações secundárias · START: inventário\nMENU ou Voltar: pausa e estados rápidos\nControles Bluetooth/USB também são aceitos pelo runtime.",13,TEXT));
+        panel.addView(text("Direcional: mover · A/B: ações\nL/R: ações secundárias · START: inventário\nCâmera / PRINT: marcar um local no álbum\nInventário (START) → ÁLBUM: ver capturas\nAlgumas cenas não permitem abrir o inventário. O álbum também fica em MENU.\nMENU ou Voltar: pausa e estados rápidos\nOs ícones são decorativos; as letras identificam os botões.\nControles Bluetooth/USB também são aceitos pelo runtime.",13,TEXT));
         slider(panel,"Tamanho", "touch_size",80,130,100,"%");
         slider(panel,"Opacidade", "touch_opacity",30,90,70,"%");
         android.content.SharedPreferences prefs=getSharedPreferences("minish",MODE_PRIVATE);

@@ -2,9 +2,20 @@
 #include <atomic>
 
 namespace minish {
-namespace { std::atomic<PixelMode> mode{PixelMode::Smooth}; }
+namespace {
+std::atomic<PixelMode> mode{PixelMode::Smooth};
+CaptureSink capture_sink=nullptr;
+std::atomic<bool> capture_pending{false};
+void capture(const std::uint8_t* rgb,int w,int h) {
+    if (capture_pending.exchange(false) && capture_sink) capture_sink(rgb,w,h);
+}
+}
 PixelMode pixel_mode() { return mode.load(std::memory_order_relaxed); }
 void set_pixel_mode(PixelMode value) { mode.store(value,std::memory_order_relaxed); }
+void set_capture_sink(CaptureSink sink) { capture_sink=sink; capture_pending=false; }
+bool request_capture() {
+    return capture_sink && !capture_pending.exchange(true);
+}
 
 void PixelPresenter::close() {
     if (texture_) SDL_DestroyTexture(texture_);
@@ -31,9 +42,12 @@ void PixelPresenter::present(SDL_Renderer* renderer, SDL_Texture* original,
         if (texture_) {
             scale2x_rgb24(rgb,w,h,scaled_);
             if (SDL_UpdateTexture(texture_,nullptr,scaled_.data(),w*6)==0 &&
-                    SDL_RenderCopy(renderer,texture_,nullptr,&destination)==0) return;
+                    SDL_RenderCopy(renderer,texture_,nullptr,&destination)==0) {
+                capture(scaled_.data(),w*2,h*2); return;
+            }
         }
     }
     SDL_RenderCopy(renderer,original,nullptr,&destination);
+    capture(rgb,w,h);
 }
 }
