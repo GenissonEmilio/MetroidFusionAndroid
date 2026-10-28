@@ -1,5 +1,39 @@
 # Validação Android
 
+## Entrega pública 0.3.1 (28 de outubro de 2026)
+
+O proprietário aprovou a versão 0.3.1 no aparelho, incluindo o visual do
+álbum integrado, conforme registrado na
+[PR #1](https://github.com/GenissonEmilio/ZeldaMinishCapAndroid/pull/1).
+A PR foi revisada e integrada ao `main` no commit `45dc028`.
+
+Nesta máquina Linux, a validação para publicação foi repetida com JDK 21,
+SDK 35, build-tools 35.0.0, NDK 28.2.13676358 e CMake 3.31.6:
+
+- Testes da página de fotos, captura limpa, paginação, callbacks antigos,
+  moldura e transições: passaram, inclusive com AddressSanitizer e
+  UndefinedBehaviorSanitizer.
+- Renderer SDL/Scale2x, oito verificações do importador com a ROM USA,
+  persistência/anotações/limites do álbum, integridade das fontes e firmware,
+  sintaxe Python e shell: passaram.
+- Recompiler host reconstruído e corpus regenerado: oito hooks declarados,
+  oito correspondências, incluindo `Subtask_PauseMenu`. Nenhum fonte gerado
+  foi editado ou versionado.
+- `assembleRelease` e `lintRelease`, com `-PminishAlbumTest=false`: passaram.
+  APK público `io.github.genissonemilio.minishcap`, versão 0.3.1/código 5,
+  somente ARM64, sem depuração e com apenas a permissão VIBRATE.
+- Assinatura APK v2 válida, com o mesmo certificado SHA-256 da v0.2.0:
+  `fec15b1bce128aaffb788d09753d804ac4b0ba6ad2cc476e2d77b670410d3e60`.
+- `zipalign -c -P 16 4` e segmentos LOAD das três bibliotecas com alinhamento
+  de 16 KiB: passaram. Callbacks JNI de página, foto e gravação exportados.
+- Auditoria do APK: firmware MIT e licença presentes; sem arquivo ROM,
+  BIOS Nintendo, chave privada ou pacote oculto Zelda 1.
+
+Não houve nova execução no aparelho nesta máquina. O aceite visual é o
+registrado pelo proprietário na PR; as medições históricas abaixo não são
+medições de desempenho da 0.3.1. A campanha inteira não foi revalidada.
+Relatórios locais permanecem ignorados em `artifacts/review-0.3.1-*`.
+
 ## Revisão visual 0.3.1 (28 de outubro de 2026)
 
 O proprietário confirmou que a 0.3.0 funcionou no aparelho e enviou capturas
@@ -21,9 +55,10 @@ a linguagem do jogo e evitar a troca brusca de fundo/moldura.
 - A prévia local foi renderizada com a fonte da ROM sobre a captura enviada
   pelo proprietário; é uma composição de referência, não um teste da 0.3.1
   executando no aparelho.
-- O APK continua no pacote `.albumtest`, versão 0.3.1/código 5, para atualizar
-  a instalação de teste anterior. A validação visual final permanece com
-  o proprietário; não fazer merge antes dessa confirmação.
+- O APK de revisão usou o pacote `.albumtest`, versão 0.3.1/código 5, para
+  atualizar a instalação de teste anterior. A confirmação visual posterior
+  do proprietário foi registrada na PR; o APK público usa o pacote normal,
+  conforme a validação de entrega acima.
 
 ---
 
@@ -62,8 +97,9 @@ abrem a foto; L/R percorre as abas; START retorna à partida. Fechar/reabrir o
 app deve conservar a foto. Anotar/exportar continua na galeria Android.
 
 O emulador local reconheceu WHPX, mas foi encerrado para liberar memória
-durante a compilação. Nenhuma partida da 0.3.0 foi validada nele. A PR deve
-permanecer em rascunho, sem merge, até a validação do proprietário.
+durante a compilação. Nenhuma partida da 0.3.0 foi validada nele. Naquele
+momento, a PR aguardava a validação do proprietário; o aceite posterior e
+a entrega pública estão registrados acima.
 
 ---
 
