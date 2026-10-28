@@ -19,6 +19,11 @@ jobs:
           distribution: temurin
           java-version: '21'
       - run: python3 tools/android/check_sources.py
+      - name: Verify in-game album navigation and clean camera capture
+        run: |
+          mkdir -p build/photo-test
+          g++ -std=c++17 -O2 -Wall -Wextra -Isrc tests/photo_menu_test.cpp src/photo_menu.cpp -o build/photo-test/check
+          build/photo-test/check
       - name: Verify pixel-art filtering and integer presentation
         run: |
           sudo apt-get update -qq

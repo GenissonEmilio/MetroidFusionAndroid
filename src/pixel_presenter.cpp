@@ -5,6 +5,7 @@ namespace minish {
 namespace {
 std::atomic<PixelMode> mode{PixelMode::Smooth};
 CaptureSink capture_sink=nullptr;
+FrameFilter frame_filter=nullptr;
 std::atomic<bool> capture_pending{false};
 void capture(const std::uint8_t* rgb,int w,int h) {
     if (capture_pending.exchange(false) && capture_sink) capture_sink(rgb,w,h);
@@ -13,6 +14,7 @@ void capture(const std::uint8_t* rgb,int w,int h) {
 PixelMode pixel_mode() { return mode.load(std::memory_order_relaxed); }
 void set_pixel_mode(PixelMode value) { mode.store(value,std::memory_order_relaxed); }
 void set_capture_sink(CaptureSink sink) { capture_sink=sink; capture_pending=false; }
+void set_frame_filter(FrameFilter filter) { frame_filter=filter; }
 bool request_capture() {
     return capture_sink && !capture_pending.exchange(true);
 }
@@ -24,6 +26,11 @@ void PixelPresenter::close() {
 
 void PixelPresenter::present(SDL_Renderer* renderer, SDL_Texture* original,
         const std::uint8_t* rgb, int w, int h, const SDL_Rect& destination) {
+    const auto* source=rgb;
+    if(frame_filter) {
+        if(const auto* filtered=frame_filter(rgb,w,h)) rgb=filtered;
+        if(rgb!=source) SDL_UpdateTexture(original,nullptr,rgb,w*3);
+    }
     // Do not smooth a downscaled image or compound an optional HD raster.
     const bool smooth=pixel_mode()==PixelMode::Smooth && w==240 && h==160 &&
         destination.w>=w*2 && destination.h>=h*2;

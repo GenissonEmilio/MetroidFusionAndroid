@@ -26,17 +26,21 @@ A interface Android, o importador e os controles touch são deste fork.
    sem o borrado de interpolação bilinear. Pixel perfeito mantém os pixels
    originais em blocos uniformes. Durante a partida, troque em **MENU →
    Graphics → Estilo dos pixels**, com efeito imediato e escolha salva.
-8. **Câmera / PRINT**, durante a partida, guarda um PNG da imagem do jogo,
-   sem controles ou menu do port por cima. O processamento do PNG acontece
-   fora da thread do jogo. Aguarde a confirmação **Local marcado no álbum**.
-9. O inventário original aberto por **START** ganha a aba **ÁLBUM**, no
-   lugar do controle SELECT (não usado nesse menu). Ela aparece apenas nas
-   páginas estáveis do inventário e respeita os bloqueios normais da história.
-   Também há acesso por **MENU → Album → Abrir album de Hyrule**, ou pela
-   tela inicial. Voltar fecha o álbum e retoma a mesma partida/menu.
+8. Abra **START → Itens → R → Álbum de Hyrule**. A nova página fica entre
+   Itens e Status, na mesma sequência L/R do inventário, com arte em 240×160.
+   O direcional seleciona **FOTO** ou uma das seis miniaturas; **A** abre a
+   câmera ou a imagem, e **B** retorna. Nas bordas de uma linha, esquerda e
+   direita passam às outras páginas de fotos. **L/R** troca de aba do jogo;
+   **START** fecha o inventário, inclusive na câmera e na visualização.
+9. Na câmera, **A** fotografa a última cena completa antes de abrir o
+   inventário. **B** retorna ao álbum. A imagem salva não contém moldura,
+   inventário ou controles touch. PNG e miniaturas são processados fora da
+   thread do jogo; a câmera mostra a confirmação **LEMBRANCA GUARDADA!**.
+   O inventário continua respeitando os bloqueios normais da história.
 
-O **Álbum de Hyrule** mostra miniaturas, imagem ampliada, título, data e
-anotações. Use dois dedos para ampliar, arraste para explorar ou dê dois
+O álbum do jogo usa os mesmos arquivos da galeria acessível pela tela inicial
+ou por **MENU → Album → Gerenciar fotos e anotacoes**. Essa galeria Android
+mostra título, data e anotações. Use dois dedos para ampliar, arraste para explorar ou dê dois
 toques para ampliar/restaurar. **Anotar** nomeia o local e registra o que
 revisitar; **Exportar PNG** usa o seletor Android para guardar uma cópia;
 **Excluir** pede confirmação. Até 200 capturas ficam no diretório privado
@@ -48,11 +52,12 @@ Os controles usam ícones vetoriais originais de espada, escudo, pena, gorro,
 mapa, bolsa e brasão. As letras A/B/L/R continuam visíveis; os ícones são
 decorativos e não mudam os itens equipados ou as funções originais dos botões.
 
-A integração ao menu original é uma **extensão visual do port**. O Android
-desenha a aba sobre o inventário e abre sua própria galeria. O estado do
-menu é apenas lido das estruturas USA, verificadas contra a referência
-`zeldaret/tmc` fixada; o port não reescreve o código do menu na ROM nem
-desbloqueia o inventário durante cenas que o jogo mantém bloqueadas.
+A página é uma extensão C++ do menu de pausa: um hook no subtask original
+insere Álbum entre Itens e Status e assume seus comandos enquanto a página
+está visível. A câmera e a visualização usam o renderer do jogo, sem trocar
+de Activity Android. O framebuffer original e a ROM permanecem intactos.
+Offsets e navegação são restritos à USA verificada; a configuração de hooks
+fica em `symbols/minishcap_reviewed.toml`. O código gerado é regenerado.
 
 Os dois estilos conservam a proporção original de 240×160. A ampliação usa
 passos inteiros: no modo Suave, também os subpixels do filtro têm tamanho
@@ -211,6 +216,18 @@ mkdir -p build/album-test
 javac -d build/album-test android/app/src/main/java/io/github/genissonemilio/minishcap/CaptureStore.java tools/android/CaptureStoreTest.java
 java -cp build/album-test io.github.genissonemilio.minishcap.CaptureStoreTest
 ```
+
+A navegação e o estado da nova página têm um teste independente de ROM/SDL:
+
+```bash
+mkdir -p build/photo-test
+g++ -std=c++17 -O2 -Wall -Wextra -Isrc tests/photo_menu_test.cpp src/photo_menu.cpp -o build/photo-test/check
+build/photo-test/check
+```
+
+Ele verifica entrada pelos dois lados, propriedade dos comandos, retorno ao
+menu nativo, paginação, respostas assíncronas antigas, limites e igualdade
+byte a byte entre a cena recebida e a captura entregue ao armazenamento.
 
 Para repetir o teste com interpretação/cache desativados, acrescente
 `--ez qa_strict true` ao comando que inicia a tela principal. Os registros

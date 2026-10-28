@@ -8,6 +8,9 @@ void set_pixel_mode(PixelMode mode);
 using CaptureSink = void (*)(const std::uint8_t*, int, int);
 void set_capture_sink(CaptureSink sink);
 bool request_capture();
+using FrameFilter = const std::uint8_t* (*)(const std::uint8_t*, int, int);
+// Presentation-only game pages; the source GBA framebuffer stays immutable.
+void set_frame_filter(FrameFilter filter);
 
 // Owned by HostWindow's backend; close() runs before SDL destroys the renderer.
 class PixelPresenter {
