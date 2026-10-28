@@ -1,5 +1,45 @@
 # Validação Android
 
+## Atualização 0.3.0 — álbum e câmera no menu (28 de outubro de 2026)
+
+Esta atualização tem validação de fontes, renderer e compilação. A execução
+durante uma partida no aparelho do proprietário ainda está pendente; as
+medições de desempenho das versões anteriores abaixo não qualificam a 0.3.0.
+
+- ROM fornecida localmente: 16 MiB, SHA-1 USA esperado. Corpus regenerado,
+  com oito hooks declarados e oito correspondências, incluindo o novo
+  `Subtask_PauseMenu`. Nenhum fonte gerado foi editado ou versionado.
+- Teste C++ da página: entrada por Itens/R e Status/L, troca para o menu
+  nativo, exclusividade de input, câmera sem cena, captura idêntica ao buffer
+  recebido, coalescência durante gravação, paginação e descarte de callbacks
+  antigos após troca de tela/reset.
+- Renderer SDL por software: a página chega aos pixels apresentados, o
+  framebuffer de entrada permanece intacto e fechar a página remove a imagem
+  anterior. O teste original de Scale2x/cores/escalas também passa.
+- Persistência, anotações e limite de 200 fotos: passaram. Oito verificações
+  do importador, incluindo a ROM local: passaram.
+- `assembleDebug`, `assembleRelease -PminishAlbumTest=true` e `lintRelease`:
+  passaram no Windows, com JDK 17, SDK 35 e NDK 28.2.13676358.
+- Pacote de teste conferido: `io.github.genissonemilio.minishcap.albumtest`,
+  rótulo **Minish Cap - Album teste**, versão 0.3.0/código 4, somente ARM64.
+  A instalação e seu armazenamento são separados do aplicativo normal.
+- Auditoria de conteúdo, assinatura APK v2 e `zipalign -c -P 16 4`: passaram.
+  Segmentos LOAD de `libmain.so`: alinhamento `0x4000`. Os três callbacks JNI
+  de página/foto/gravação estão exportados. APK sem ROM e sem chaves privadas.
+- Checks de fontes executados com sucesso no GitHub, na branch da PR.
+
+Roteiro de validação no aparelho: importar a ROM no app de teste; em uma
+partida com inventário liberado, abrir START, Itens, R; usar A para abrir a
+câmera e novamente A para fotografar. B retorna ao álbum; direcional e A
+abrem a foto; L/R percorre as abas; START retorna à partida. Fechar/reabrir o
+app deve conservar a foto. Anotar/exportar continua na galeria Android.
+
+O emulador local reconheceu WHPX, mas foi encerrado para liberar memória
+durante a compilação. Nenhuma partida da 0.3.0 foi validada nele. A PR deve
+permanecer em rascunho, sem merge, até a validação do proprietário.
+
+---
+
 Data de execução: 23 de outubro de 2026.
 
 ## Fontes e importação
