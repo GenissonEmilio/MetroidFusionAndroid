@@ -41,3 +41,12 @@ sha1 = "b4bd50e4131b027c334547b4524e2dbbd4227130"
 start = 0x030062A0
 end   = 0x03006428
 mode  = "arm"
+
+# Original pause subtask, verified against USA symbol metadata and ROM entry.
+# The built-in album inserts one native-sized page between Items and Quest
+# Status and owns the whole subtask while it is visible, preventing equip/save
+# actions beneath the page. Desktop builds have no registered album callback.
+[[mod_function_hook]]
+addr = 0x080A4EA0
+mode = "thumb"
+note = "Built-in Android photo album: pause-subtask page/input ownership."

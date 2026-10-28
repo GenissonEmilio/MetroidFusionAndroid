@@ -1,5 +1,72 @@
 # Validação Android
 
+## Revisão visual 0.3.1 (28 de outubro de 2026)
+
+O proprietário confirmou que a 0.3.0 funcionou no aparelho e enviou capturas
+comparando o inventário e o álbum. A revisão solicitada é visual: conservar
+a linguagem do jogo e evitar a troca brusca de fundo/moldura.
+
+- O álbum passa a compor sobre o frame original do inventário: conserva
+  fundo amarelo, frisos, moldura entalhada, abas L/R e indicadores A/B.
+- Fonte latina lida da ROM USA em memória; nenhum bitmap extraído ou frame
+  enviado pelo proprietário foi adicionado ao Git. Espaços para fotos,
+  cursor branco/laranja e descrição usam a apresentação do inventário.
+- Transição de oito quadros, sem atrasar a navegação original. Testes
+  comparam byte a byte todos os pixels fora das regiões de conteúdo,
+  inclusive com alterações no fundo durante a transição. Redesenhos do
+  mesmo quadro não avançam a animação; sair do inventário descarta a camada.
+- Os testes anteriores de navegação, captura limpa, persistência, paginação
+  e rejeição de callbacks antigos continuam aplicáveis. Os novos testes
+  também verificam a leitura restrita da fonte e a rejeição de ROM truncada.
+- A prévia local foi renderizada com a fonte da ROM sobre a captura enviada
+  pelo proprietário; é uma composição de referência, não um teste da 0.3.1
+  executando no aparelho.
+- O APK continua no pacote `.albumtest`, versão 0.3.1/código 5, para atualizar
+  a instalação de teste anterior. A validação visual final permanece com
+  o proprietário; não fazer merge antes dessa confirmação.
+
+---
+
+## Atualização 0.3.0 — álbum e câmera no menu (28 de outubro de 2026)
+
+Esta atualização teve validação de fontes, renderer e compilação. O
+proprietário posteriormente confirmou seu funcionamento no aparelho;
+as medições históricas abaixo não são medições de desempenho da 0.3.0.
+
+- ROM fornecida localmente: 16 MiB, SHA-1 USA esperado. Corpus regenerado,
+  com oito hooks declarados e oito correspondências, incluindo o novo
+  `Subtask_PauseMenu`. Nenhum fonte gerado foi editado ou versionado.
+- Teste C++ da página: entrada por Itens/R e Status/L, troca para o menu
+  nativo, exclusividade de input, câmera sem cena, captura idêntica ao buffer
+  recebido, coalescência durante gravação, paginação e descarte de callbacks
+  antigos após troca de tela/reset.
+- Renderer SDL por software: a página chega aos pixels apresentados, o
+  framebuffer de entrada permanece intacto e fechar a página remove a imagem
+  anterior. O teste original de Scale2x/cores/escalas também passa.
+- Persistência, anotações e limite de 200 fotos: passaram. Oito verificações
+  do importador, incluindo a ROM local: passaram.
+- `assembleDebug`, `assembleRelease -PminishAlbumTest=true` e `lintRelease`:
+  passaram no Windows, com JDK 17, SDK 35 e NDK 28.2.13676358.
+- Pacote de teste conferido: `io.github.genissonemilio.minishcap.albumtest`,
+  rótulo **Minish Cap - Album teste**, versão 0.3.0/código 4, somente ARM64.
+  A instalação e seu armazenamento são separados do aplicativo normal.
+- Auditoria de conteúdo, assinatura APK v2 e `zipalign -c -P 16 4`: passaram.
+  Segmentos LOAD de `libmain.so`: alinhamento `0x4000`. Os três callbacks JNI
+  de página/foto/gravação estão exportados. APK sem ROM e sem chaves privadas.
+- Checks de fontes executados com sucesso no GitHub, na branch da PR.
+
+Roteiro de validação no aparelho: importar a ROM no app de teste; em uma
+partida com inventário liberado, abrir START, Itens, R; usar A para abrir a
+câmera e novamente A para fotografar. B retorna ao álbum; direcional e A
+abrem a foto; L/R percorre as abas; START retorna à partida. Fechar/reabrir o
+app deve conservar a foto. Anotar/exportar continua na galeria Android.
+
+O emulador local reconheceu WHPX, mas foi encerrado para liberar memória
+durante a compilação. Nenhuma partida da 0.3.0 foi validada nele. A PR deve
+permanecer em rascunho, sem merge, até a validação do proprietário.
+
+---
+
 Data de execução: 23 de outubro de 2026.
 
 ## Fontes e importação

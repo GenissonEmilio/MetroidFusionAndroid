@@ -3,6 +3,9 @@ package io.github.genissonemilio.minishcap;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 /** Private, bounded album. PNG publication is the commit point for each entry. */
 public final class CaptureStore {
@@ -51,7 +54,12 @@ public final class CaptureStore {
         File temporary=file(id,".meta.tmp"), destination=file(id,".properties");
         try {
             try(FileOutputStream out=new FileOutputStream(temporary)) { p.store(out,"Minish Cap album"); out.getFD().sync(); }
-            if(!temporary.renameTo(destination)) throw new IOException("Falha ao salvar a anotação");
+            try {
+                Files.move(temporary.toPath(),destination.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);
+            } catch(AtomicMoveNotSupportedException unsupported) {
+                Files.move(temporary.toPath(),destination.toPath(),StandardCopyOption.REPLACE_EXISTING);
+            }
         } finally { temporary.delete(); }
     }
     public synchronized Entry save(byte[] png,int width,int height,int area,int room,int x,int y) throws IOException {

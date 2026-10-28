@@ -156,7 +156,7 @@ public class ZeldaSetupActivity extends Activity {
     }
     private void controls() {
         LinearLayout panel=new LinearLayout(this); panel.setOrientation(LinearLayout.VERTICAL); panel.setPadding(dp(24),dp(8),dp(24),0);
-        panel.addView(text("Direcional: mover · A/B: ações\nL/R: ações secundárias · START: inventário\nCâmera / PRINT: marcar um local no álbum\nInventário (START) → ÁLBUM: ver capturas\nAlgumas cenas não permitem abrir o inventário. O álbum também fica em MENU.\nMENU ou Voltar: pausa e estados rápidos\nOs ícones são decorativos; as letras identificam os botões.\nControles Bluetooth/USB também são aceitos pelo runtime.",13,TEXT));
+        panel.addView(text("Direcional: mover · A/B: ações\nL/R: ações secundárias · START: inventário\nNo inventário: Itens → R → Álbum de Hyrule\nÁlbum: direcional seleciona · A abre a foto ou a câmera\nCâmera: A fotografa a última cena do jogo · B volta ao álbum\nL/R troca de aba · START fecha o inventário\nAlgumas cenas não permitem abrir o inventário.\nMENU ou Voltar: pausa, estados rápidos e gerenciamento de fotos\nOs ícones são decorativos; as letras identificam os botões.\nControles Bluetooth/USB também são aceitos pelo runtime.",13,TEXT));
         slider(panel,"Tamanho", "touch_size",80,130,100,"%");
         slider(panel,"Opacidade", "touch_opacity",30,90,70,"%");
         android.content.SharedPreferences prefs=getSharedPreferences("minish",MODE_PRIVATE);

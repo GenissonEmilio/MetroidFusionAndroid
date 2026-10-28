@@ -3,8 +3,10 @@
 Este fork adiciona um aplicativo Android ARM64 com importação local de ROM
 `.gba`/`.zip`, controles touch em verde e dourado, ajuste de tamanho/opacidade,
 menu durante a partida e exportação do save do cartucho. Inclui estilos de
-pixel, ícones temáticos nos controles e um álbum com capturas, zoom e
-anotações, acessível também pelo inventário aberto por START.
+pixel e ícones temáticos nos controles. O inventário aberto por START inclui
+uma página Álbum de Hyrule, navegável por L/R, com câmera e fotos desenhadas
+dentro da área do jogo. A galeria Android continua disponível para anotar,
+ampliar e exportar as mesmas capturas.
 
 Código-base: **mstan/MinishCapRecomp**, com o mesmo motor **gbarecomp** usado em
 **mstan/FireRedLeafGreenRecomp**. Não é uma conversão do código de Pokémon em Zelda.

@@ -13,7 +13,8 @@ add_subdirectory("${GBARECOMP_ROOT}" gbarecomp_build EXCLUDE_FROM_ALL)
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AndroidRenderer.cmake")
 file(GLOB MINISH_GENERATED CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/generated/*.cpp")
 add_library(main SHARED src/main.cpp src/game_config.cpp src/minish_extended_view.cpp
-    src/mods/minish_adaptive_view_plugin.cpp src/android_port.cpp ${MINISH_GENERATED})
+    src/mods/minish_adaptive_view_plugin.cpp src/android_port.cpp
+    src/photo_menu.cpp src/game_photo_album.cpp ${MINISH_GENERATED})
 set_source_files_properties(src/main.cpp PROPERTIES COMPILE_DEFINITIONS "main=MinishMain")
 target_include_directories(main PRIVATE src "${GBARECOMP_ROOT}/src/armv4t"
     "${GBARECOMP_ROOT}/src/gba" "${GBARECOMP_ROOT}/src/runtime" "${GBARECOMP_ROOT}/src/debug")

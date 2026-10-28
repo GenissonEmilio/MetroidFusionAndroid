@@ -5,7 +5,7 @@
 #include "recomp_runtime_ui.h"
 #include "pixel_presenter.h"
 #include "zelda_icons.h"
-#include "album_context.h"
+#include "game_photo_album.h"
 #include "runtime_bus_bridge.h"
 #include "gba_bus.h"
 #include <jni.h>
@@ -28,15 +28,7 @@ float scale = 1.0f;
 int opacity = 180;
 std::uint16_t pressed = 0;
 bool menu_was_down = false;
-bool capture_was_down = false,album_was_down = false;
 bool stock_pad_visible = false;
-bool inventory_open() {
-    const auto* bus=gbarecomp::active_bus();
-    if(!bus) return false;
-    const auto* i=bus->iwram_ptr(); const auto* e=bus->ewram_ptr();
-    return minish::album_in_inventory({i[0x1002],i[0x1003],i[0x1004],
-        e[0x32EC0],e[0x32EC2],e[0x344A1],e[0x34491]});
-}
 void java_action(const char* name) {
     auto* env=static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
     auto activity=static_cast<jobject>(SDL_AndroidGetActivity());
@@ -58,7 +50,7 @@ void capture_frame(const std::uint8_t* rgb,int w,int h) {
     if(method && data) {
         env->SetByteArrayRegion(data,0,w*h*3,reinterpret_cast<const jbyte*>(rgb));
         int area=-1,room=-1,x=-1,y=-1;
-        if(const auto* bus=gbarecomp::active_bus();bus && bus->iwram_ptr()[0x1002]==2) {
+        if(auto* bus=gbarecomp::active_bus();bus && bus->iwram_ptr()[0x1002]==2) {
             const auto* i=bus->iwram_ptr();const auto* e=bus->ewram_ptr();
             const auto* location=i+0xBF0;
             if(i[0x1004]==7) location=e+0x32EDC; // UI backup while a subtask owns RAM.
@@ -77,7 +69,6 @@ void close_runtime_menu() {
 }
 int menu_action(const char* key) {
     if(!key) return 0;
-    if(std::string(key)=="minish.capture") { minish::request_capture();close_runtime_menu();return 1; }
     if(std::string(key)=="minish.album") { close_runtime_menu();java_action("showAlbum");return 1; }
     if(std::string(key)!="minish.library") return 0;
     // Guide closes the entire menu; Back may only leave a selected section.
@@ -105,12 +96,8 @@ int menu_set(const char* key, int value) {
     return 1;
 }
 const RecompRuntimeUiItem menu_items[]{ {
-    "minish.capture", "Album", "Marcar local (print)",
-    "Guarda a imagem limpa do jogo no album deste aparelho.",
-    RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
-}, {
-    "minish.album", "Album", "Abrir album de Hyrule",
-    "Veja as capturas e anote os locais que deseja revisitar.",
+    "minish.album", "Album", "Gerenciar fotos e anotacoes",
+    "A camera e o album ficam em START, depois da aba de itens (R).",
     RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
 }, {
     "minish.pixels", "Graphics", "Estilo dos pixels",
@@ -141,14 +128,8 @@ Layout layout(float w, float h, int left, int top, int right, int bottom,
         {w*.56f, y1-u*.24f, u*.95f, u*.42f, 3, "START", false},
         {x1-u*.65f, y0+u*.27f, u*1.3f, u*.53f, 8, "R", false},
         {x0+u*.65f, y0+u*.27f, u*1.3f, u*.53f, 9, "L", false},
-        {w*.5f, y0+u*.24f, u*1.05f, u*.48f, -1, "MENU", false},
-        {w*.62f, y0+u*.24f, u*.76f, u*.48f, -2, "PRINT", false}
+        {w*.5f, y0+u*.24f, u*1.05f, u*.48f, -1, "MENU", false}
     };
-    if(game.width>0 && inventory_open()) {
-        // The inventory does not use SELECT. Its safe-area slot becomes a
-        // journal tab while START and all actual inventory controls remain.
-        for(auto& b:l.buttons) if(b.bit==2) { b.bit=-3;b.label="ALBUM"; }
-    }
     return l;
 }
 bool contains(const Button& b, float x, float y) {
@@ -158,10 +139,11 @@ bool contains(const Button& b, float x, float y) {
 std::uint16_t input(const TouchFrameInfo* f) {
     pressed = 0;
     stock_pad_visible = f && f->pad_visible;
-    if (!f) { menu_was_down=capture_was_down=album_was_down=false;return 0x3ff; }
+    if (!f) { menu_was_down=false;return 0x3ff; }
+    minish::photo_album_frame(f->frame_count);
     auto l = layout(f->drawable_width, f->drawable_height, f->safe_insets.left,
         f->safe_insets.top, f->safe_insets.right, f->safe_insets.bottom,f->game_rect);
-    bool menu=false,capture=false,album=false;
+    bool menu=false;
     for (std::size_t i=0; i<f->point_count; ++i) {
         const auto& p=f->points[i];
         float x=p.drawable_x-l.dx, y=p.drawable_y-l.dy;
@@ -176,8 +158,6 @@ std::uint16_t input(const TouchFrameInfo* f) {
         for (const auto& b:l.buttons) if (contains(b,p.drawable_x,p.drawable_y)) {
             if(b.bit>=0) { if(!stock_pad_visible) pressed |= 1<<b.bit; }
             else if(b.bit==-1 && !stock_pad_visible) menu=true;
-            else if(b.bit==-2) capture=true;
-            else if(b.bit==-3) album=true;
         }
     }
     if (menu && !menu_was_down) {
@@ -186,9 +166,6 @@ std::uint16_t input(const TouchFrameInfo* f) {
         e.type=SDL_KEYUP; SDL_PushEvent(&e);
     }
     menu_was_down=menu;
-    if(capture && !capture_was_down) minish::request_capture();
-    if(album && !album_was_down) java_action("showAlbum");
-    capture_was_down=capture;album_was_down=album;
     return 0x3ff & ~pressed;
 }
 OverlayColor gold{225,199,119,220}, ink{8,33,27,180}, light{209,242,217,255};
@@ -249,6 +226,7 @@ void draw(HostOverlay* o) {
 namespace minish {
 void configure_android(gbarecomp::RunOptions& opts) {
     minish::set_capture_sink(&capture_frame);
+    minish::configure_game_photo_album();
     opts.input_frame=&input; opts.host_overlay=&draw;
     opts.touch_pad_default=0;
     opts.touch_gesture_claims=gbarecomp::kTouchClaimLongPress;
@@ -258,7 +236,7 @@ void configure_android(gbarecomp::RunOptions& opts) {
     opts.save_state_slot_count=10;
     opts.diagnostic_replay_default=false;
     opts.ui_extra_items=menu_items;
-    opts.ui_extra_item_count=4;
+    opts.ui_extra_item_count=3;
     opts.ui_get=&menu_get;
     opts.ui_set=&menu_set;
     opts.ui_action=&menu_action;

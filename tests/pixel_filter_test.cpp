@@ -83,6 +83,8 @@ int capture_width=0,capture_height=0;
 void capture_sink(const std::uint8_t* rgb,int w,int h) {
     captured.assign(rgb,rgb+w*h*3);capture_width=w;capture_height=h;
 }
+std::vector<std::uint8_t> menu_pixels(240*160*3,61);
+const std::uint8_t* menu_filter(const std::uint8_t*,int,int) { return menu_pixels.data(); }
 void check_renderer() {
     check(SDL_Init(SDL_INIT_VIDEO)==0,SDL_GetError());
     SDL_Surface* surface=SDL_CreateRGBSurfaceWithFormat(0,960,640,24,SDL_PIXELFORMAT_RGB24);
@@ -117,6 +119,22 @@ void check_renderer() {
             check(actual[(y*960+x)*3+c]==expected,"SDL output has blur, bad colors or stale mode");
         }
     }
+    const auto before=input;
+    minish::set_frame_filter(menu_filter);
+    minish::set_pixel_mode(minish::PixelMode::Perfect);
+    presenter.present(renderer,original,input.data(),240,160,{0,0,960,640});
+    std::vector<std::uint8_t> page(960*640*3);
+    check(SDL_RenderReadPixels(renderer,nullptr,SDL_PIXELFORMAT_RGB24,page.data(),960*3)==0,SDL_GetError());
+    check(std::all_of(page.begin(),page.end(),[](std::uint8_t c) { return c==61; }),
+        "In-game page did not reach the actual SDL renderer");
+    check(input==before,"In-game page modified the source GBA framebuffer");
+    minish::set_frame_filter(nullptr);
+    // HostWindow uploads the new guest image before each present.
+    check(SDL_UpdateTexture(original,nullptr,input.data(),240*3)==0,SDL_GetError());
+    presenter.present(renderer,original,input.data(),240,160,{0,0,960,640});
+    check(SDL_RenderReadPixels(renderer,nullptr,SDL_PIXELFORMAT_RGB24,page.data(),960*3)==0,SDL_GetError());
+    check(page[0]==input[0] && page[1]==input[1] && page[2]==input[2],
+        "Closing the page left stale menu pixels on screen");
     presenter.close(); presenter.close();
     minish::set_capture_sink(nullptr);
     SDL_DestroyTexture(original); SDL_DestroyRenderer(renderer); SDL_FreeSurface(surface);
