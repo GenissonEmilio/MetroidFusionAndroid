@@ -14,6 +14,11 @@ apply from: '../../gbarecomp/platform/android/gbarecomp-app.gradle'
 apply from: '../sdl-java.gradle'
 android {
     buildToolsVersion '35.0.0'
+    defaultConfig {
+        def albumTest = providers.gradleProperty('minishAlbumTest').orNull == 'true'
+        if (albumTest) applicationIdSuffix '.albumtest'
+        manifestPlaceholders.minishAppLabel = albumTest ? 'Minish Cap - Album teste' : '@string/app_name'
+    }
     buildFeatures.buildConfig = true
     ndkVersion '28.2.13676358'
     externalNativeBuild.cmake.version '3.31.6'

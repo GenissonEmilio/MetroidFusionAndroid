@@ -4,7 +4,7 @@
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <application android:allowBackup="false" android:hardwareAccelerated="true"
-        android:icon="@drawable/ic_crest" android:label="@string/app_name"
+        android:icon="@drawable/ic_crest" android:label="${minishAppLabel}"
         android:resizeableActivity="true" android:theme="@style/MinishTheme">
         <meta-data android:name="gbarecomp.title" android:value="${gbaTitle}" />
         <meta-data android:name="gbarecomp.rom_label" android:value="${gbaRomLabel}" />

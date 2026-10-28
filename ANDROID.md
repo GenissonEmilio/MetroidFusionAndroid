@@ -110,6 +110,10 @@ tools/android/build.sh Release
 ```
 
 O APK sai em `android/app/build/outputs/apk/release/app-release.apk`.
+Para validar o álbum sem substituir uma instalação existente, acrescente
+`-PminishAlbumTest=true` ao comando Gradle. Esse APK aparece como
+**Minish Cap - Album teste** e usa um armazenamento separado (`.albumtest`);
+importe a ROM nessa instalação. A opção não altera o pacote normal.
 O script de geração verifica hashes, aplica `symbols/minishcap_reviewed.toml`
 e conserva o mtime dos arquivos cujo conteúdo não mudou, para reaproveitar a
 compilação incremental. O corpus fica ignorado em `generated/`: não o envie

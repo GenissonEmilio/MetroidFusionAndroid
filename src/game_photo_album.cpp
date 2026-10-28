@@ -134,6 +134,7 @@ namespace minish {
 void configure_game_photo_album() {
     menu.load_page=&load_page;menu.load_photo=&load_photo;menu.save_photo=&save_photo;
     set_frame_filter(&filter);
+    gba_mod_set_function_hook_enabled(plugin,1);
 }
 void photo_album_frame(std::uint64_t frame) {
     std::lock_guard<std::recursive_mutex> guard(mutex);
