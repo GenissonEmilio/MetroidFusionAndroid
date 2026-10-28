@@ -117,7 +117,7 @@ const std::uint8_t* filter(const std::uint8_t* rgb,int w,int h) {
 std::vector<std::uint8_t> bytes(JNIEnv* env,jbyteArray data,jsize maximum) {
     if(!data) return {};
     const auto size=env->GetArrayLength(data);
-    if(size<0 || size>maximum) return {};
+    if(size<=0 || size>maximum) return {};
     std::vector<std::uint8_t> out(size);
     env->GetByteArrayRegion(data,0,size,reinterpret_cast<jbyte*>(out.data()));return out;
 }
