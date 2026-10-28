@@ -7,8 +7,8 @@
 namespace minish {
 namespace {
 using Color = std::array<std::uint8_t, 3>;
-constexpr Color ink{31,45,46}, paper{214,211,184}, edge{107,116,105},
-    white{255,250,210}, teal{71,170,174}, gold{244,207,92}, dark{28,68,68};
+constexpr Color ink{48,48,56}, paper{216,212,212}, edge{144,152,160},
+    white{255,255,255}, blue{24,48,176}, orange{255,104,0}, dark{16,16,24};
 
 // Small original 5x7 bitmap alphabet. UI text does not depend on Android fonts.
 constexpr std::string_view alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:/-<>!?";
@@ -33,6 +33,10 @@ constexpr std::array<std::array<unsigned,7>,45> glyphs{{
 
 struct Canvas {
     std::vector<std::uint8_t>& rgb;
+    const std::uint8_t* font=nullptr;
+    bool native_letter(unsigned ch) const {
+        return font && ((ch>='0' && ch<='9') || (ch>='A' && ch<='Z') || (ch>='a' && ch<='z'));
+    }
     void pixel(int x,int y,Color c) {
         if (x<0 || y<0 || x>=240 || y>=160) return;
         std::copy(c.begin(),c.end(),rgb.begin()+(y*240+x)*3);
@@ -44,16 +48,43 @@ struct Canvas {
     void frame(int x,int y,int w,int h,Color c) {
         rect(x,y,w,1,c);rect(x,y+h-1,w,1,c);rect(x,y,1,h,c);rect(x+w-1,y,1,h,c);
     }
-    void text(int x,int y,std::string_view s,Color c=ink,int max_chars=38) {
-        int n=0;
+    int advance(unsigned ch) const {
+        if(ch==' ') return 4;
+        if(ch=='.' || ch==':') return 3;
+        if(ch=='/' || ch=='-') return 7;
+        if(!native_letter(ch)) return 6;
+        int right=0,left=8;
+        for(int py=0;py<16;++py) for(int px=0;px<8;++px)
+            if(font[(ch*16+py)*8+px]) { left=std::min(left,px);right=std::max(right,px); }
+        return left==8?4:right-left+2;
+    }
+    int text_width(std::string_view s) const {
+        int result=0;for(unsigned char ch:s) result+=advance(ch);return result;
+    }
+    void text(int x,int y,std::string_view s,Color c=ink,int max_width=240) {
+        const int end=std::min(240,x+max_width);
         for(unsigned char ch:s) {
-            if(n++>=max_chars) break;
-            if(ch>='a' && ch<='z') ch-=32;
-            const auto i=alphabet.find(static_cast<char>(ch));
-            if(i!=std::string_view::npos) for(int row=0;row<7;++row)
-                for(int col=0;col<5;++col)
-                    if(glyphs[i][row]&(16>>col)) pixel(x+col,y+row,c);
-            x+=6;
+            const int step=advance(ch);if(x+step>end) break;
+            if(ch=='.' || ch==':') {
+                rect(x,y+12,2,2,c);
+                if(ch==':') rect(x,y+6,2,2,c);
+            } else if(ch=='/') {
+                for(int py=3;py<14;++py) pixel(x+5-(py-3)/2,y+py,c);
+            } else if(ch=='-') rect(x,y+9,6,1,c);
+            else if(native_letter(ch)) {
+                int left=8;
+                for(int row=0;row<16;++row) for(int col=0;col<8;++col)
+                    if(font[(ch*16+row)*8+col]) left=std::min(left,col);
+                for(int row=0;row<16;++row) for(int col=0;col<8;++col)
+                    if(font[(ch*16+row)*8+col]) pixel(x+col-left,y+row,c);
+            } else {
+                if(ch>='a' && ch<='z') ch-=32;
+                const auto i=alphabet.find(static_cast<char>(ch));
+                if(i!=std::string_view::npos) for(int row=0;row<7;++row)
+                    for(int col=0;col<5;++col)
+                        if(glyphs[i][row]&(16>>col)) pixel(x+col,y+row+4,c);
+            }
+            x+=step;
         }
     }
     void image(const std::vector<std::uint8_t>& src,int sw,int sh,int x,int y,int w,int h) {
@@ -67,12 +98,44 @@ struct Canvas {
         }
     }
     void camera(int x,int y) {
-        rect(x+4,y,9,3,dark);rect(x,y+3,21,14,dark);
-        frame(x+1,y+4,19,12,white);rect(x+3,y+6,3,2,gold);
-        rect(x+9,y+6,8,8,teal);frame(x+10,y+7,6,6,white);
-        rect(x+12,y+9,2,2,dark);
+        rect(x+4,y,6,2,ink);rect(x,y+2,15,11,ink);
+        rect(x+1,y+3,13,9,{196,164,96});rect(x+1,y+3,13,2,{248,216,136});
+        rect(x+2,y+5,2,2,white);rect(x+7,y+4,6,7,blue);
+        rect(x+8,y+5,4,5,{88,160,216});rect(x+9,y+6,2,2,white);
+    }
+    void cursor(int x,int y,int w,int h) {
+        for(int sx:{0,1}) for(int sy:{0,1}) {
+            const int px=sx?x+w-5:x,py=sy?y+h-5:y;
+            rect(px,py,5,5,white);
+            rect(px+(sx?0:2),py+(sy?0:2),3,3,paper);
+            rect(px+1,py+1,3,3,orange);
+            rect(px+(sx?0:3),py+(sy?0:3),2,2,paper);
+        }
     }
 };
+
+Color native_paper(const std::uint8_t* frame) {
+    if(!frame) return paper;
+    std::array<unsigned,4096> counts{};
+    std::array<Color,4096> colors{};
+    for(int y=26;y<136;++y) for(int x=34;x<214;++x) {
+        const auto* p=frame+(y*240+x)*3;
+        if(p[0]<180 || p[1]<180 || p[2]<180 || p[0]>240 ||
+                std::abs(int(p[0])-p[1])>24 || std::abs(int(p[1])-p[2])>24) continue;
+        const int key=((p[0]>>4)<<8)|((p[1]>>4)<<4)|(p[2]>>4);
+        ++counts[key];
+        if(p[0]+p[1]+p[2]>colors[key][0]+colors[key][1]+colors[key][2]) colors[key]={p[0],p[1],p[2]};
+    }
+    const auto peak=*std::max_element(counts.begin(),counts.end());
+    if(!peak) return paper;
+    Color chosen{};
+    // Empty item slots can be the largest gray patch. Prefer the lighter
+    // common stone tone while rejecting tiny white highlights in the frame.
+    for(std::size_t i=0;i<counts.size();++i)
+        if(counts[i]>=std::max(1u,peak/3) && colors[i][0]+colors[i][1]+colors[i][2]>
+                chosen[0]+chosen[1]+chosen[2]) chosen=colors[i];
+    return chosen;
+}
 }
 
 void PhotoMenu::reset() {
@@ -177,61 +240,129 @@ void PhotoMenu::capture_finished(std::uint64_t token,bool success) {
     saving_=false;message_=success?"LEMBRANCA GUARDADA!":"FALHA AO GUARDAR. TENTE NOVAMENTE.";
     if(success && active()) { page_=0;selected_=0;reload(); }
 }
-bool PhotoMenu::render(std::vector<std::uint8_t>& rgb) const {
+bool PhotoMenu::load_native_font(const std::uint8_t* rom,std::size_t size) {
+    // USA font-page metadata: tmc data/const/text.s, gUnk_08109248.
+    // The first page contains 8x16 packed-nibble glyphs, 64 bytes each.
+    constexpr std::size_t table=0x109248,base=0x692F60;
+    if(!rom || size!=0x1000000 || rom[table]!=0x60 || rom[table+1]!=0x2F ||
+            rom[table+2]!=0x69 || rom[table+3]!=0x08) return false;
+    std::array<std::uint8_t,128*8*16> decoded{};
+    unsigned marks=0;
+    for(unsigned ch=0;ch<128;++ch) for(unsigned y=0;y<16;++y) for(unsigned x=0;x<8;++x) {
+        const unsigned pixel=(rom[base+ch*64+y*4+x/2]>>((x%2)*4))&15;
+        // Zero is transparent; F is the font's column/spacing sentinel.
+        decoded[(ch*16+y)*8+x]=(pixel!=0 && pixel!=15)?1:0;
+        if(ch=='A') marks+=decoded[(ch*16+y)*8+x];
+    }
+    if(!marks) return false;
+    font_=decoded;native_font_=true;return true;
+}
+bool PhotoMenu::render(std::vector<std::uint8_t>& rgb,const std::uint8_t* native) const {
     if(!active()) return false;
-    rgb.resize(width*height*3);Canvas c{rgb};
+    if(native) rgb.assign(native,native+width*height*3);
+    else rgb.assign(width*height*3,216); // source-only preview, never runtime chrome
+    Canvas c{rgb,native_font_?font_.data():nullptr};
     if(view_==View::Camera) {
         c.rect(0,0,240,160,ink);c.image(scene_,scene_w_,scene_h_,0,0,240,160);
-        c.rect(0,0,240,14,dark);c.text(7,4,"CAMERA DE HYRULE",white);
+        c.rect(0,0,240,18,dark);c.frame(1,1,238,16,white);
+        c.text(8,1,"Camera de Hyrule",white);
         // Viewfinder corners stay outside the saved clean scene.
         for(int x:{12,216}) for(int y:{23,125}) {
             c.rect(x,y,12,1,white);c.rect(x,y,1,12,white);
         }
-        c.rect(0,143,240,17,dark);
-        c.text(5,148,message_.empty()?"A FOTOGRAFAR    B ALBUM":message_,white);
-        if(scene_.empty()) { c.rect(15,65,210,24,paper);c.text(22,73,"VOLTE AO JOGO PARA FOTOGRAFAR"); }
+        c.rect(15,140,210,18,dark);c.frame(15,140,210,18,white);
+        c.text(21,141,message_.empty()?"A: Fotografar   B: Album":message_,white,198);
+        if(scene_.empty()) c.text(28,72,"Volte ao jogo para fotografar.",white,190);
         return true;
     }
     if(view_==View::Photo) {
         c.rect(0,0,240,160,ink);c.image(photo_,240,160,0,0,240,160);
-        c.rect(0,146,240,14,dark);c.text(7,150,"B VOLTAR AO ALBUM",white);
-        if(photo_loading_ || photo_.empty()) c.text(48,73,photo_loading_?"ABRINDO LEMBRANCA...":"FOTO INDISPONIVEL",white);
+        c.rect(15,140,210,18,dark);c.frame(15,140,210,18,white);
+        c.text(21,141,"B: Voltar ao album",white,198);
+        if(photo_loading_ || photo_.empty()) c.text(40,72,photo_loading_?"Abrindo lembranca...":"Foto indisponivel",white,180);
         return true;
     }
-    c.rect(0,0,240,160,{167,183,123});
-    for(int y=0;y<160;++y) for(int x=0;x<240;++x) {
-        const unsigned n=static_cast<unsigned>(x*13+y*29+(x/11)*(y/9)*7);
-        if(n%47<3) c.pixel(x,y,{180,193,139});
+    // Keep the live yellow backdrop, carved border, L/R tabs and A/B badges.
+    // Only the original title field and inner content are owned by this page.
+    const auto stone=native_paper(native);
+    c.rect(34,35,180,101,stone);
+    if(native) for(int y=35;y<136;++y) for(int x=34;x<214;++x) {
+        const auto* p=native+((119+(y-26)%8)*240+34+(x-34)%8)*3;
+        if(std::abs(int(p[0])-stone[0])<12 && std::abs(int(p[1])-stone[1])<12 &&
+                std::abs(int(p[2])-stone[2])<12) c.pixel(x,y,{p[0],p[1],p[2]});
     }
-    c.rect(17,19,207,120,edge);c.rect(19,21,203,116,paper);
-    c.frame(20,22,201,114,white);
-    // Subtle stone grain, an original texture rather than extracted ROM art.
-    for(int y=24;y<135;++y) for(int x=22;x<219;++x)
-        if((x*17+y*11)%109==0) c.pixel(x,y,{188,189,166});
-    c.rect(3,3,135,23,edge);c.rect(5,5,131,19,white);c.rect(7,7,127,15,teal);
-    c.text(30,11,"ALBUM DE HYRULE",dark);
-    c.rect(151,5,72,24,selected_==0?gold:paper);c.frame(151,5,72,24,edge);
-    c.camera(155,8);c.text(181,14,"FOTO",dark);
-    c.rect(2,65,13,23,teal);c.frame(2,65,13,23,white);c.text(5,73,"<",dark);
-    c.rect(225,65,13,23,teal);c.frame(225,65,13,23,white);c.text(229,73,">",dark);
-    char count[40];std::snprintf(count,sizeof(count),"%03d/200  PAG %02d",total_,page_+1);
-    c.text(25,30,count,edge);
+    Color cyan{80,208,240};
+    if(native) std::copy_n(native+(9*240+9)*3,3,cyan.begin());
+    c.rect(4,4,103,17,cyan);
+    const int title_x=(102-c.text_width("ALBUM"))/2;
+    const auto title=[&](int dx,int dy,Color color) {
+        int x=title_x;
+        for(const char ch:std::string_view("ALBUM")) {
+            c.text(x+dx,2+dy,std::string_view(&ch,1),color);
+            x+=c.advance(static_cast<unsigned char>(ch))+2;
+        }
+    };
+    for(int dx=-1;dx<=1;++dx) for(int dy=-1;dy<=1;++dy)
+        title(dx,dy,blue);
+    title(0,0,white);
+
+    c.camera(43,37);c.text(64,34,"Camera",ink,38);
+    if(selected_==0) c.cursor(40,34,21,19);
+    char count[24];std::snprintf(count,sizeof(count),"%03d/200",total_);
+    c.text(210-c.text_width(count),34,count,ink);
+    Color slot=stone,highlight=stone;
+    for(auto& v:slot) v=static_cast<std::uint8_t>(std::max(0,int(v)-18));
+    for(auto& v:highlight) v=static_cast<std::uint8_t>(std::min(255,int(v)+24));
     for(int i=0;i<page_size;++i) {
-        const int x=23+(i%3)*66,y=42+(i/3)*46;
-        c.rect(x-1,y-1,64,42,edge);c.rect(x,y,62,40,white);
-        c.rect(x+1,y+1,60,36,dark);
-        if(i<static_cast<int>(entries_.size())) c.image(entries_[i].thumbnail,60,36,x+1,y+1,60,36);
-        if(selected_==i+1) { c.frame(x-2,y-2,66,44,gold);c.frame(x-3,y-3,68,46,dark); }
+        const int x=39+(i%3)*58,y=55+(i/3)*37;
+        c.rect(x+2,y,49,33,edge);c.rect(x,y+2,53,29,edge);
+        c.rect(x+2,y+1,49,31,slot);c.rect(x+1,y+2,51,29,slot);
+        c.rect(x+2,y+32,49,1,highlight);c.rect(x+52,y+3,1,28,highlight);
+        if(i<static_cast<int>(entries_.size())) c.image(entries_[i].thumbnail,60,36,x+2,y+2,49,29);
+        if(selected_==i+1) c.cursor(x-1,y-1,55,35);
     }
-    if(loading_) { c.rect(42,70,156,18,paper);c.text(51,76,"ABRINDO LEMBRANCAS..."); }
-    else if(entries_.empty()) {
-        c.rect(27,60,185,47,paper);c.text(42,67,"SUA AVENTURA EM IMAGENS");
-        c.text(42,82,"ESCOLHA FOTO E APERTE A");c.text(54,96,"PARA GUARDAR UM LOCAL");
-    }
-    c.rect(15,140,210,17,ink);c.frame(15,140,210,17,white);
-    const std::string label=selected_>0 && selected_<=static_cast<int>(entries_.size())?
-        entries_[selected_-1].title:"A CAMERA  L/R ABAS  B VOLTAR";
-    c.text(21,145,message_.empty()?label:message_,white,33);
+    c.rect(15,140,210,18,dark);c.frame(15,140,210,18,white);
+    char page_label[40];std::snprintf(page_label,sizeof(page_label),"A: Camera    %d/%d",page_+1,std::max(1,(total_+5)/6));
+    std::string label=selected_>0 && selected_<=static_cast<int>(entries_.size())?
+        entries_[selected_-1].title:page_label;
+    if(loading_) label="Abrindo lembrancas...";
+    c.text(21,141,message_.empty()?label:message_,white,198);
     return true;
+}
+
+bool PhotoMenuPresentation::album_content_pixel(int x,int y) {
+    return (x>=4 && x<107 && y>=3 && y<21) ||
+           (x>=34 && x<214 && y>=34 && y<136) ||
+           (x>=15 && x<225 && y>=140 && y<158);
+}
+void PhotoMenuPresentation::reset() {
+    view_=PhotoMenu::View::Closed;transition_=full_frame_=false;
+    start_=0;from_.clear();previous_.clear();
+}
+bool PhotoMenuPresentation::compose(const PhotoMenu& menu,const std::uint8_t* native,
+        std::uint64_t frame,bool inventory_visible,std::vector<std::uint8_t>& out) {
+    constexpr std::size_t size=240*160*3;
+    if(!native || !inventory_visible) { reset();return false; }
+    const auto next=menu.view();
+    if(next!=view_) {
+        from_=previous_.size()==size?previous_:std::vector<std::uint8_t>(native,native+size);
+        full_frame_=(view_==PhotoMenu::View::Camera || view_==PhotoMenu::View::Photo ||
+                     next==PhotoMenu::View::Camera || next==PhotoMenu::View::Photo);
+        start_=frame;transition_=true;view_=next;
+    }
+    if(!menu.render(out,native)) out.assign(native,native+size);
+    if(transition_) {
+        const unsigned step=frame>=start_?static_cast<unsigned>(std::min<std::uint64_t>(
+            transition_frames,frame-start_+1)):transition_frames;
+        for(int y=0;y<160;++y) for(int x=0;x<240;++x) {
+            if(!full_frame_ && !album_content_pixel(x,y)) continue;
+            const auto p=static_cast<std::size_t>((y*240+x)*3);
+            for(int ch=0;ch<3;++ch) out[p+ch]=static_cast<std::uint8_t>(
+                (from_[p+ch]*(transition_frames-step)+out[p+ch]*step)/transition_frames);
+        }
+        if(step==transition_frames) transition_=false;
+    }
+    previous_=out;
+    return menu.active() || transition_ || next!=PhotoMenu::View::Closed;
 }
 } // namespace minish

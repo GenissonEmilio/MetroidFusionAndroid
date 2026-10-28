@@ -18,7 +18,9 @@ constexpr std::uint32_t pause_entry = 0x080A4EA0;
 // Successful disk/decode completions arrive on the album worker thread.
 std::recursive_mutex mutex;
 minish::PhotoMenu menu;
-std::vector<std::uint8_t> composed, canvas;
+minish::PhotoMenuPresentation presentation;
+std::vector<std::uint8_t> composed, canvas, native_menu;
+const std::uint8_t* font_rom=nullptr;
 std::uint64_t last_frame = 0;
 int last_area=-1,last_room=-1,last_x=-1,last_y=-1;
 
@@ -63,7 +65,8 @@ void save_photo(const std::vector<std::uint8_t>& rgb,int w,int h,std::uint64_t t
 }
 void reset() {
     std::lock_guard<std::recursive_mutex> guard(mutex);
-    menu.reset();last_frame=0;last_area=last_room=last_x=last_y=-1;
+    menu.reset();presentation.reset();font_rom=nullptr;
+    last_frame=0;last_area=last_room=last_x=last_y=-1;
     // This built-in page is available independently of optional mod packages.
     gba_mod_set_function_hook_enabled(plugin,1);
 }
@@ -72,6 +75,9 @@ int pause_menu(std::uint32_t,int,ArmCpuState* cpu) {
     if(!bus || !cpu) return 0;
     std::lock_guard<std::recursive_mutex> guard(mutex);
     const auto s=snapshot(*bus);
+    if(font_rom!=bus->rom_ptr()) {
+        font_rom=bus->rom_ptr();menu.load_native_font(font_rom,bus->rom_size());
+    }
     const auto* i=bus->iwram_ptr();const auto* e=bus->ewram_ptr();
     const unsigned keys=i[0xFF2]|(i[0xFF3]<<8); // gInput.newKeys (USA metadata)
     const std::uint32_t table=e[0x8C]|(e[0x8D]<<8)|(e[0x8E]<<16)|(e[0x8F]<<24);
@@ -102,12 +108,24 @@ const std::uint8_t* filter(const std::uint8_t* rgb,int w,int h) {
     }
     if(menu.active() && !minish::album_in_inventory(s))
         menu.update(0,s.screen,0,false);
-    if(!menu.render(canvas)) return rgb;
-    if(w==240 && h==160) return canvas.data();
-    // Preserve the presentation contract if an optional wider view is active.
-    composed.assign(static_cast<std::size_t>(w*h*3),0);
+    const bool inventory_visible=s.task==2 && s.state==2 && s.substate==7 &&
+        s.phase==2 && s.subtask==1;
+    if(!inventory_visible) { presentation.reset();return rgb; }
     const int dw=std::min(w,h*240/160),dh=std::min(h,w*160/240);
     const int ox=(w-dw)/2,oy=(h-dh)/2;
+    const std::uint8_t* native=rgb;
+    if(w!=240 || h!=160) {
+        native_menu.resize(240*160*3);
+        for(int y=0;y<160;++y) for(int x=0;x<240;++x) {
+            const auto p=((oy+y*dh/160)*w+ox+x*dw/240)*3;
+            std::copy_n(rgb+p,3,native_menu.data()+(y*240+x)*3);
+        }
+        native=native_menu.data();
+    }
+    if(!presentation.compose(menu,native,last_frame,inventory_visible,canvas)) return rgb;
+    if(w==240 && h==160) return canvas.data();
+    // Optional view margins remain the live native background, too.
+    composed.assign(rgb,rgb+w*h*3);
     for(int y=0;y<dh;++y) for(int x=0;x<dw;++x) {
         const int source=((y*160/dh)*240+x*240/dw)*3;
         std::copy_n(canvas.data()+source,3,composed.data()+((y+oy)*w+x+ox)*3);
@@ -138,7 +156,7 @@ void configure_game_photo_album() {
 }
 void photo_album_frame(std::uint64_t frame) {
     std::lock_guard<std::recursive_mutex> guard(mutex);
-    if(frame<last_frame) menu.reset(); // rewind/load must discard transient UI
+    if(frame<last_frame) { menu.reset();presentation.reset(); }
     last_frame=frame;
 }
 }

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <iterator>
 
 namespace {
 using Menu=minish::PhotoMenu;
@@ -80,10 +81,60 @@ void paging() {
     const auto old=h.page_token;h.menu.reset();
     check(!h.menu.receive_page(old,0,0,{}),"Closed/reset menu accepted page callback");
 }
-void preview(const char* path) {
+void presentation() {
+    Harness h;minish::PhotoMenuPresentation display;
+    std::vector<std::uint8_t> native(240*160*3,214),out;
+    // An animated backdrop must survive each intermediate transition frame.
+    const auto original=native;
+    check(!display.compose(h.menu,native.data(),99,true,out),"Closed menu replaced native frame");
+    h.open();h.receive(0,0);
+    for(std::uint64_t frame=100;frame<108;++frame) {
+        native[0]=static_cast<std::uint8_t>(frame);
+        check(display.compose(h.menu,native.data(),frame,true,out),"Opening page did not compose");
+        for(int y=0;y<160;++y) for(int x=0;x<240;++x) {
+            if(minish::PhotoMenuPresentation::album_content_pixel(x,y)) continue;
+            const int p=(y*240+x)*3;
+            check(std::equal(out.begin()+p,out.begin()+p+3,native.begin()+p),
+                "Backdrop, border or original L/R controls changed");
+        }
+        auto same=out;
+        display.compose(h.menu,native.data(),frame,true,out);
+        check(out==same,"Presentation timing depended on host redraw count");
+    }
+    check(out!=native,"Album content did not render");
+    h.key(Menu::L);
+    check(display.compose(h.menu,native.data(),108,true,out),"Closing page snapped without transition");
+    display.compose(h.menu,native.data(),115,true,out);
+    check(out==native,"Closing transition left stale photo pixels");
+    check(!display.compose(h.menu,native.data(),116,true,out),"Closed compositor remained active");
+    h.open();display.compose(h.menu,native.data(),117,true,out);
+    check(!display.compose(h.menu,native.data(),118,false,out),"Album leaked into gameplay/restore");
+    check(std::equal(native.begin()+1,native.end(),original.begin()+1),"Compositor modified guest pixels");
+    std::vector<std::uint8_t> fake_rom(0x1000000);
+    check(!h.menu.load_native_font(fake_rom.data(),fake_rom.size()),"Unknown font layout accepted");
+    const unsigned char pointer[]={0x60,0x2F,0x69,0x08};
+    std::copy(std::begin(pointer),std::end(pointer),fake_rom.begin()+0x109248);
+    fake_rom[0x692F60+'A'*64+3*4+1]=0xE0;
+    check(h.menu.load_native_font(fake_rom.data(),fake_rom.size()),"Bounded native font unavailable");
+    check(!h.menu.load_native_font(fake_rom.data(),1024),"Truncated ROM accepted for font");
+}
+void preview(const char* path,const char* frame_path,const char* rom_path) {
     Harness h;h.open();h.receive(0,0);
-    std::vector<std::uint8_t> image;
-    check(h.menu.render(image),"Album did not render");
+    std::vector<std::uint8_t> image,native;
+    if(frame_path) {
+        std::ifstream in(frame_path,std::ios::binary);
+        std::string kind;int w=0,height=0,maximum=0;
+        in>>kind>>w>>height>>maximum;in.get();
+        check(kind=="P6" && w==240 && height==160 && maximum==255,"Wrong reference frame format");
+        native.resize(240*160*3);in.read(reinterpret_cast<char*>(native.data()),native.size());
+        check(static_cast<bool>(in),"Reference frame read failed");
+    }
+    if(rom_path) {
+        std::ifstream in(rom_path,std::ios::binary);
+        std::vector<std::uint8_t> rom((std::istreambuf_iterator<char>(in)),{});
+        check(h.menu.load_native_font(rom.data(),rom.size()),"User ROM native font decode failed");
+    }
+    check(h.menu.render(image,native.empty()?nullptr:native.data()),"Album did not render");
     std::ofstream out(path,std::ios::binary);
     out<<"P6\n240 160\n255\n";
     out.write(reinterpret_cast<const char*>(image.data()),static_cast<std::streamsize>(image.size()));
@@ -91,7 +142,7 @@ void preview(const char* path) {
 }
 }
 int main(int argc,char** argv) {
-    navigation();capture();paging();
-    if(argc>1) preview(argv[1]);
-    std::cout<<"Photo menu navigation, ownership, capture, async lifecycle and pagination passed\n";
+    navigation();capture();paging();presentation();
+    if(argc>1) preview(argv[1],argc>2?argv[2]:nullptr,argc>3?argv[3]:nullptr);
+    std::cout<<"Photo menu navigation, capture, lifecycle, native chrome and transitions passed\n";
 }

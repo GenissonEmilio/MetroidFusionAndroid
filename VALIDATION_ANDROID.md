@@ -1,10 +1,37 @@
 # Validação Android
 
+## Revisão visual 0.3.1 (28 de outubro de 2026)
+
+O proprietário confirmou que a 0.3.0 funcionou no aparelho e enviou capturas
+comparando o inventário e o álbum. A revisão solicitada é visual: conservar
+a linguagem do jogo e evitar a troca brusca de fundo/moldura.
+
+- O álbum passa a compor sobre o frame original do inventário: conserva
+  fundo amarelo, frisos, moldura entalhada, abas L/R e indicadores A/B.
+- Fonte latina lida da ROM USA em memória; nenhum bitmap extraído ou frame
+  enviado pelo proprietário foi adicionado ao Git. Espaços para fotos,
+  cursor branco/laranja e descrição usam a apresentação do inventário.
+- Transição de oito quadros, sem atrasar a navegação original. Testes
+  comparam byte a byte todos os pixels fora das regiões de conteúdo,
+  inclusive com alterações no fundo durante a transição. Redesenhos do
+  mesmo quadro não avançam a animação; sair do inventário descarta a camada.
+- Os testes anteriores de navegação, captura limpa, persistência, paginação
+  e rejeição de callbacks antigos continuam aplicáveis. Os novos testes
+  também verificam a leitura restrita da fonte e a rejeição de ROM truncada.
+- A prévia local foi renderizada com a fonte da ROM sobre a captura enviada
+  pelo proprietário; é uma composição de referência, não um teste da 0.3.1
+  executando no aparelho.
+- O APK continua no pacote `.albumtest`, versão 0.3.1/código 5, para atualizar
+  a instalação de teste anterior. A validação visual final permanece com
+  o proprietário; não fazer merge antes dessa confirmação.
+
+---
+
 ## Atualização 0.3.0 — álbum e câmera no menu (28 de outubro de 2026)
 
-Esta atualização tem validação de fontes, renderer e compilação. A execução
-durante uma partida no aparelho do proprietário ainda está pendente; as
-medições de desempenho das versões anteriores abaixo não qualificam a 0.3.0.
+Esta atualização teve validação de fontes, renderer e compilação. O
+proprietário posteriormente confirmou seu funcionamento no aparelho;
+as medições históricas abaixo não são medições de desempenho da 0.3.0.
 
 - ROM fornecida localmente: 16 MiB, SHA-1 USA esperado. Corpus regenerado,
   com oito hooks declarados e oito correspondências, incluindo o novo

@@ -28,7 +28,7 @@ A interface Android, o importador e os controles touch são deste fork.
    Graphics → Estilo dos pixels**, com efeito imediato e escolha salva.
 8. Abra **START → Itens → R → Álbum de Hyrule**. A nova página fica entre
    Itens e Status, na mesma sequência L/R do inventário, com arte em 240×160.
-   O direcional seleciona **FOTO** ou uma das seis miniaturas; **A** abre a
+   O direcional seleciona **Camera** ou uma das seis miniaturas; **A** abre a
    câmera ou a imagem, e **B** retorna. Nas bordas de uma linha, esquerda e
    direita passam às outras páginas de fotos. **L/R** troca de aba do jogo;
    **START** fecha o inventário, inclusive na câmera e na visualização.
@@ -58,6 +58,13 @@ está visível. A câmera e a visualização usam o renderer do jogo, sem trocar
 de Activity Android. O framebuffer original e a ROM permanecem intactos.
 Offsets e navegação são restritos à USA verificada; a configuração de hooks
 fica em `symbols/minishcap_reviewed.toml`. O código gerado é regenerado.
+
+Na versão 0.3.1, a página mantém o fundo e a moldura originais apresentados
+pelo jogo, incluindo abas L/R e indicadores A/B. Apenas o título, o conteúdo
+interno e a descrição são compostos pelo álbum. As letras são decodificadas
+da fonte da ROM USA carregada, sem distribuir uma cópia desses gráficos.
+A troca usa uma transição de oito quadros de guest; redesenhar o mesmo quadro
+não acelera a animação, e os comandos originais não são atrasados.
 
 Os dois estilos conservam a proporção original de 240×160. A ampliação usa
 passos inteiros: no modo Suave, também os subpixels do filtro têm tamanho
