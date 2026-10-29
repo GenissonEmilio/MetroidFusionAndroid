@@ -12,16 +12,22 @@ endif()
 add_subdirectory("${GBARECOMP_ROOT}" gbarecomp_build EXCLUDE_FROM_ALL)
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AndroidRenderer.cmake")
 file(GLOB MINISH_GENERATED CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/generated/*.cpp")
-add_library(main SHARED src/main.cpp src/game_config.cpp src/minish_extended_view.cpp
-    src/mods/minish_adaptive_view_plugin.cpp src/android_port.cpp
+option(FUSION_QA_FAST_BUILD "Unoptimized generated corpus for local x86_64 QA only" OFF)
+if(FUSION_QA_FAST_BUILD)
+    if(NOT ANDROID_ABI STREQUAL "x86_64")
+        message(FATAL_ERROR "FUSION_QA_FAST_BUILD is reserved for the x86_64 QA emulator")
+    endif()
+    set_source_files_properties(${MINISH_GENERATED} PROPERTIES COMPILE_OPTIONS "-O0")
+endif()
+add_library(main SHARED src/main.cpp src/android_port.cpp
     src/photo_menu.cpp src/game_photo_album.cpp ${MINISH_GENERATED})
-set_source_files_properties(src/main.cpp PROPERTIES COMPILE_DEFINITIONS "main=MinishMain")
+set_source_files_properties(src/main.cpp PROPERTIES COMPILE_DEFINITIONS "main=FusionMain")
 target_include_directories(main PRIVATE src "${GBARECOMP_ROOT}/src/armv4t"
     "${GBARECOMP_ROOT}/src/gba" "${GBARECOMP_ROOT}/src/runtime" "${GBARECOMP_ROOT}/src/debug")
 target_link_libraries(main PRIVATE "-Wl,--start-group" gbarecomp_runtime gbarecomp_debug
     gbarecomp_gba gbarecomp_armv4t "-Wl,--end-group" SDL2::SDL2 log android)
 target_compile_definitions(main PRIVATE GBARECOMP_DEFAULT_DEBUG_PORT=19842
-    GBARECOMP_WINDOW_TITLE="MinishCap" GBARECOMP_DEFAULT_GAME_CONFIG="variants/minishcap/game.toml")
+    GBARECOMP_WINDOW_TITLE="Metroid Fusion" GBARECOMP_DEFAULT_GAME_CONFIG="variants/fusion/game.toml")
 include("${GBARECOMP_RUNTIME_UI_ROOT}/recomp_ui.cmake")
 recomp_target_launcher_ui(main CONSOLE gba)
 set_property(TARGET main PROPERTY CXX_STANDARD 20)

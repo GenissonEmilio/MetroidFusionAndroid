@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace minish {
+namespace fusion {
 
 // This page belongs to the port's pause menu, not to the cartridge save.
 // Native menu chrome is borrowed from the current frame; ROM glyphs are decoded
@@ -61,7 +61,7 @@ private:
     std::vector<PhotoEntry> entries_;
     std::vector<std::uint8_t> scene_, photo_;
     int scene_w_ = 0, scene_h_ = 0;
-    std::array<std::uint8_t,128*8*16> font_{};
+    std::array<std::uint8_t,128*16*16> font_{};
     bool native_font_ = false;
 };
 
@@ -82,4 +82,4 @@ private:
     std::vector<std::uint8_t> from_, previous_;
 };
 
-} // namespace minish
+} // namespace fusion

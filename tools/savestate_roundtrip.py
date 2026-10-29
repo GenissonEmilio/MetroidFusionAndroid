@@ -18,7 +18,7 @@ Usage:
     python tools/savestate_roundtrip.py
     python tools/savestate_roundtrip.py --warmup 40 --advance 20
 
-Spawns build/MinishCapRecomp.exe --tcp <port> in the repo root (so the
+Spawns build/FusionRecomp.exe --tcp <port> in the repo root (so the
 cached BIOS/ROM sidecars + game.toml resolve), drives it, and exits
 non-zero on any mismatch.
 """
@@ -37,7 +37,7 @@ import time
 from typing import Optional
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-EXE = ROOT / "build" / "MinishCapRecomp.exe"
+EXE = ROOT / "build" / "host" / "FusionRecomp.exe"
 
 # (region command, byte size) — the full guest memory surface the
 # always-on TCP server exposes.

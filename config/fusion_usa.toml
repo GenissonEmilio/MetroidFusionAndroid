@@ -1,0 +1,6 @@
+[rom]
+sha1 = "ca33f4348c2c05dd330d37b97e2c5a69531dfe87"
+crc32 = "0x6C75479C"
+[save]
+type = "sram"
+size = "0x8000"

@@ -4,7 +4,7 @@
 #include <cstring>
 #include <vector>
 
-namespace minish {
+namespace fusion {
 enum class PixelMode { Perfect = 0, Smooth = 1 };
 
 struct PixelLayout { int x, y, width, height, integer_scale; };
@@ -52,4 +52,4 @@ inline void scale2x_rgb24(const std::uint8_t* source, int w, int h,
         std::memcpy(out+w*6,p2,3); std::memcpy(out+w*6+3,p3,3);
     }
 }
-} // namespace minish
+} // namespace fusion

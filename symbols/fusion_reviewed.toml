@@ -1,0 +1,54 @@
+# Reviewed against metroidret/mf crt0.s, init_helpers.c and audio_wrappers.c;
+# addresses cross-checked with the supplied SHA-1-verified USA cartridge.
+[[code_copy]]
+runtime_start = 0x03000BE8
+source_start = 0x08000104
+size = 0x12C
+name = "irq_dispatch"
+
+[[extra_func]]
+addr = 0x03000BE8
+mode = "arm"
+name = "ram_InterruptCode"
+
+# Each sound copy starts with a 16-byte Thumb interworking wrapper, followed
+# by the ARM body. The ROM pointer is to the wrapper, not the ARM body.
+[[code_copy]]
+runtime_start = 0x03003658
+source_start = 0x08003EBC
+size = 0x658
+name = "sound_a"
+
+[[extra_func]]
+addr = 0x03003658
+mode = "thumb"
+name = "ram_CallSoundCodeA"
+
+[[code_copy]]
+runtime_start = 0x03003CB4
+source_start = 0x08003D68
+size = 0xA4
+name = "sound_b"
+
+[[extra_func]]
+addr = 0x03003CB4
+mode = "thumb"
+name = "ram_CallSoundCodeB"
+
+[[code_copy]]
+runtime_start = 0x03003D5C
+source_start = 0x08003E0C
+size = 0xB0
+name = "sound_c"
+
+[[extra_func]]
+addr = 0x03003D5C
+mode = "thumb"
+name = "ram_CallSoundCodeC"
+
+# PauseScreenCallCurrentHandler returns bool in r0. Its caller keeps normal
+# OAM, VBlank and audio processing while the album owns menu input.
+[[mod_function_hook]]
+addr = 0x080770B4
+mode = "thumb"
+note = "Built-in BSL album page; map/status controls cannot receive album input."

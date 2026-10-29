@@ -1,29 +1,9 @@
-# symbols/
+# Metadados Fusion USA
 
-Imported symbol map for Minish Cap. Files in here are produced by
-`tools/import_tmc_symbols/`; do not hand-edit unless explicitly
-adding a symbol the decomp doesn't yet have.
+fusion_functions.tsv: endereços, modo e nomes de 3.607 funções USA.
+fusion_data.tsv: nomes de dados ROM/RAM, sem conteúdo.
+fusion_usa.toml: identidade e intervalos não executáveis calculados do mapa.
+fusion_reviewed.toml: cópias IWRAM e hook revisados.
+fusion_reference.txt: revisão e hash dos metadados de origem.
 
-| File                          | What it is                                        |
-|-------------------------------|---------------------------------------------------|
-| `imported_symbols.tsv`        | Tab-separated: `addr  mode  name`                  |
-| `function_boundaries.tsv`     | Tab-separated: `start  end  mode  name`            |
-
-Schema:
-
-- `addr`, `start`, `end` are hex with `0x` prefix.
-- `mode` is `arm` or `thumb`.
-- `name` is the decomp's symbol name verbatim. The recompiler emits
-  C identifiers derived from it but the TSV preserves the original
-  for round-tripping.
-
-## Where the data comes from
-
-The decomp at `zeldaret/tmc` maintains symbol output in a form we
-can parse mechanically. The importer reads it and writes the TSVs
-above. The decomp's C source code is **never** read or copied —
-only the symbol metadata.
-
-If a function is missing here, it will show up in
-`dispatch_misses.log` after a run, and gets added to
-`game.toml [functions]`.
+Importador: tools/import_fusion_symbols.py, lendo JSON de biosp4rk/mf-zm-info. Não importa código C do jogo. Referência complementar metroidret/mf, revisão 0c2a5e7a53ecf952278b43b218696e206e367ad0.

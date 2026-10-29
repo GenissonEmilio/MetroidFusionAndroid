@@ -4,7 +4,7 @@
 #include "host_overlay.h"
 #include "recomp_runtime_ui.h"
 #include "pixel_presenter.h"
-#include "zelda_icons.h"
+#include "fusion_icons.h"
 #include "game_photo_album.h"
 #include "runtime_bus_bridge.h"
 #include "gba_bus.h"
@@ -20,7 +20,7 @@
 #include <vector>
 #include <unistd.h>
 
-int MinishMain(int, char**);
+int FusionMain(int, char**);
 namespace {
 using namespace gbarecomp;
 constexpr auto space = OverlaySpace::Drawable;
@@ -50,12 +50,9 @@ void capture_frame(const std::uint8_t* rgb,int w,int h) {
     if(method && data) {
         env->SetByteArrayRegion(data,0,w*h*3,reinterpret_cast<const jbyte*>(rgb));
         int area=-1,room=-1,x=-1,y=-1;
-        if(auto* bus=gbarecomp::active_bus();bus && bus->iwram_ptr()[0x1002]==2) {
-            const auto* i=bus->iwram_ptr();const auto* e=bus->ewram_ptr();
-            const auto* location=i+0xBF0;
-            if(i[0x1004]==7) location=e+0x32EDC; // UI backup while a subtask owns RAM.
-            area=location[4];room=location[5];
-            if(i[0x1004]!=7) { x=i[0x118E]|(i[0x118F]<<8);y=i[0x1192]|(i[0x1193]<<8); }
+        if(auto* bus=gbarecomp::active_bus();bus && bus->iwram_ptr()[0xBDE]==1) {
+            const auto* i=bus->iwram_ptr();area=i[0x2C];room=i[0x2D];
+            x=i[0x125A]|(i[0x125B]<<8);y=i[0x125C]|(i[0x125D]<<8);
         }
         env->CallVoidMethod(activity,method,data,w,h,area,room,x,y);
     }
@@ -69,8 +66,8 @@ void close_runtime_menu() {
 }
 int menu_action(const char* key) {
     if(!key) return 0;
-    if(std::string(key)=="minish.album") { close_runtime_menu();java_action("showAlbum");return 1; }
-    if(std::string(key)!="minish.library") return 0;
+    if(std::string(key)=="fusion.album") { close_runtime_menu();java_action("showAlbum");return 1; }
+    if(std::string(key)!="fusion.library") return 0;
     // Guide closes the entire menu; Back may only leave a selected section.
     // The paused presentation loop must close before it can consume quit.
     close_runtime_menu();SDL_Event event{};
@@ -79,12 +76,12 @@ int menu_action(const char* key) {
 }
 const char* const pixel_choices[]={"Pixel perfeito", "Suave (Scale2x)"};
 int menu_get(const char* key, int* value) {
-    if (!key || !value || std::string(key)!="minish.pixels") return 0;
-    *value=static_cast<int>(minish::pixel_mode()); return 1;
+    if (!key || !value || std::string(key)!="fusion.pixels") return 0;
+    *value=static_cast<int>(fusion::pixel_mode()); return 1;
 }
 int menu_set(const char* key, int value) {
-    if (!key || std::string(key)!="minish.pixels" || value<0 || value>1) return 0;
-    minish::set_pixel_mode(static_cast<minish::PixelMode>(value));
+    if (!key || std::string(key)!="fusion.pixels" || value<0 || value>1) return 0;
+    fusion::set_pixel_mode(static_cast<fusion::PixelMode>(value));
     auto* env=static_cast<JNIEnv*>(SDL_AndroidGetJNIEnv());
     auto activity=static_cast<jobject>(SDL_AndroidGetActivity());
     if (env && activity) {
@@ -96,15 +93,15 @@ int menu_set(const char* key, int value) {
     return 1;
 }
 const RecompRuntimeUiItem menu_items[]{ {
-    "minish.album", "Album", "Gerenciar fotos e anotacoes",
-    "A camera e o album ficam em START, depois da aba de itens (R).",
+    "fusion.album", "Album", "Gerenciar fotos e anotacoes",
+    "A camera e o album ficam em START, depois Mapa > R > Album > R > Status.",
     RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
 }, {
-    "minish.pixels", "Graphics", "Estilo dos pixels",
+    "fusion.pixels", "Graphics", "Estilo dos pixels",
     "Bordas suaves ou pixels originais. Ajuste salvo automaticamente.",
     RECOMP_RUNTIME_UI_CHOICE,0,1,1,pixel_choices,2,nullptr
 }, {
-    "minish.library", "System", "Voltar para o inicio",
+    "fusion.library", "System", "Voltar para o inicio",
     "Encerra a partida e volta para a biblioteca. O save do cartucho e preservado.",
     RECOMP_RUNTIME_UI_ACTION,0,0,0,nullptr,0,nullptr
 } };
@@ -140,7 +137,7 @@ std::uint16_t input(const TouchFrameInfo* f) {
     pressed = 0;
     stock_pad_visible = f && f->pad_visible;
     if (!f) { menu_was_down=false;return 0x3ff; }
-    minish::photo_album_frame(f->frame_count);
+    fusion::photo_album_frame(f->frame_count);
     auto l = layout(f->drawable_width, f->drawable_height, f->safe_insets.left,
         f->safe_insets.top, f->safe_insets.right, f->safe_insets.bottom,f->game_rect);
     bool menu=false;
@@ -168,7 +165,7 @@ std::uint16_t input(const TouchFrameInfo* f) {
     menu_was_down=menu;
     return 0x3ff & ~pressed;
 }
-OverlayColor gold{225,199,119,220}, ink{8,33,27,180}, light{209,242,217,255};
+OverlayColor gold{80,192,240,220}, ink{8,16,48,180}, light{248,232,112,255};
 void draw(HostOverlay* o) {
     if (!o || TouchHub::instance().presentation().drawable_width<=0) return;
     // The engine's optional stock pad takes over when its toggle is enabled.
@@ -178,7 +175,7 @@ void draw(HostOverlay* o) {
     auto bg=ink; bg.a=opacity;
     const float u=l.u, t=std::max(2.f,u*.012f);
     if(!stock_pad_visible) {
-    o->fill_circle(l.dx,l.dy,u*.98f,{8,23,20,(std::uint8_t)(opacity*.55f)},space);
+    o->fill_circle(l.dx,l.dy,u*.98f,{8,16,40,(std::uint8_t)(opacity*.55f)},space);
     o->fill_rect(l.dx-u*.32f,l.dy-u*.89f,u*.64f,u*1.78f,u*.09f,bg,space);
     o->fill_rect(l.dx-u*.89f,l.dy-u*.32f,u*1.78f,u*.64f,u*.09f,bg,space);
     const float xs[]={.65f,-.65f,0,0}, ys[]={0,0,-.65f,.65f};
@@ -190,32 +187,32 @@ void draw(HostOverlay* o) {
         o->line(x,y,x-xs[i]*u*.13f-vx*u*.1f,y-ys[i]*u*.13f-vy*u*.1f,t*2,c,space);
     }
     o->stroke_circle(l.dx,l.dy,u*.18f,t,gold,space);
-    minish::draw_icon(o,minish::Icon::Crest,l.dx,l.dy,u*.24f,space);
+    fusion::draw_icon(o,fusion::Icon::Reticle,l.dx,l.dy,u*.24f,space);
     }
     for(const auto& b:l.buttons) {
         if(stock_pad_visible && b.bit>=-1) continue;
         const bool down=b.bit>=0 && (pressed&(1<<b.bit));
-        auto c=down?OverlayColor{57,116,77,(std::uint8_t)opacity}:bg;
+        auto c=down?OverlayColor{32,80,144,(std::uint8_t)opacity}:bg;
         if(b.round) {
             o->fill_circle(b.x,b.y,b.w*.5f,c,space);
             o->stroke_circle(b.x,b.y,b.w*.5f,t,gold,space);
-            o->stroke_circle(b.x,b.y,b.w*.43f,t*.5f,{146,173,113,120},space);
+            o->stroke_circle(b.x,b.y,b.w*.43f,t*.5f,{64,160,224,120},space);
         } else {
             o->fill_rect(b.x-b.w/2,b.y-b.h/2,b.w,b.h,b.h*.3f,c,space);
             o->stroke_rect(b.x-b.w/2,b.y-b.h/2,b.w,b.h,b.h*.3f,t,gold,space);
         }
-        using minish::Icon;
-        Icon icon=Icon::Crest;
+        using fusion::Icon;
+        Icon icon=Icon::Reticle;
         switch(b.bit) {
-        case 0:icon=Icon::Sword;break;case 1:icon=Icon::Shield;break;
-        case 2:icon=Icon::Map;break;case 3:icon=Icon::Pouch;break;
-        case 8:icon=Icon::Cap;break;case 9:icon=Icon::Feather;break;
+        case 0:icon=Icon::Beam;break;case 1:icon=Icon::Missile;break;
+        case 2:icon=Icon::Map;break;case 3:icon=Icon::Map;break;
+        case 8:icon=Icon::Shoulder;break;case 9:icon=Icon::Shoulder;break;
         case -2:icon=Icon::Camera;break;case -3:icon=Icon::Album;break;
         }
         const float size=b.round?u*.7f:b.h*.5f;
-        minish::draw_icon(o,icon,b.round?b.x:b.x-b.w*.3f,b.y,size,space);
+        fusion::draw_icon(o,icon,b.round?b.x:b.x-b.w*.3f,b.y,size,space);
         if(b.round) {
-            o->fill_circle(b.x+b.w*.32f,b.y+b.h*.3f,u*.15f,{15,49,34,245},space);
+            o->fill_circle(b.x+b.w*.32f,b.y+b.h*.3f,u*.15f,{16,32,72,245},space);
             o->text(b.x+b.w*.32f,b.y+b.h*.3f-u*.11f,u*.22f,light,b.label,OverlayAlign::Center,space);
         } else {
             o->text(b.x+b.w*.18f,b.y-u*.06f,u*.12f,light,b.label,OverlayAlign::Center,space);
@@ -223,10 +220,10 @@ void draw(HostOverlay* o) {
     }
 }
 }
-namespace minish {
+namespace fusion {
 void configure_android(gbarecomp::RunOptions& opts) {
-    minish::set_capture_sink(&capture_frame);
-    minish::configure_game_photo_album();
+    fusion::set_capture_sink(&capture_frame);
+    fusion::configure_game_photo_album();
     opts.input_frame=&input; opts.host_overlay=&draw;
     opts.touch_pad_default=0;
     opts.touch_gesture_claims=gbarecomp::kTouchClaimLongPress;
@@ -255,7 +252,7 @@ extern "C" __attribute__((visibility("default"))) int SDL_main(int argc,char** a
     setvbuf(stdout,nullptr,_IOLBF,0);
     unsetenv("GBARECOMP_STRICT_STATIC");
     unsetenv("SDL_AUDIODRIVER");
-    minish::set_pixel_mode(minish::PixelMode::Smooth);
+    fusion::set_pixel_mode(fusion::PixelMode::Smooth);
     std::vector<char*> args;
     for(int i=0;i<argc;++i) {
         if(std::string(argv[i])=="--touch-size" && i+1<argc) {
@@ -263,8 +260,8 @@ extern "C" __attribute__((visibility("default"))) int SDL_main(int argc,char** a
         } else if(std::string(argv[i])=="--touch-opacity" && i+1<argc) {
             opacity=std::clamp(std::atoi(argv[++i])*255/100,65,240);
         } else if(std::string(argv[i])=="--pixel-mode" && i+1<argc) {
-            minish::set_pixel_mode(std::string(argv[++i])=="0"?
-                minish::PixelMode::Perfect:minish::PixelMode::Smooth);
+            fusion::set_pixel_mode(std::string(argv[++i])=="0"?
+                fusion::PixelMode::Perfect:fusion::PixelMode::Smooth);
         } else if(std::string(argv[i])=="--qa-muted") {
             SDL_setenv("SDL_AUDIODRIVER","dummy",1);
         } else if(std::string(argv[i])=="--qa-strict") {
@@ -272,5 +269,5 @@ extern "C" __attribute__((visibility("default"))) int SDL_main(int argc,char** a
         } else args.push_back(argv[i]);
     }
     int count=args.size(); args.push_back(nullptr);
-    return MinishMain(count,args.data());
+    return FusionMain(count,args.data());
 }

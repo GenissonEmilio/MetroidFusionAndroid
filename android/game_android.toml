@@ -1,21 +1,21 @@
 [game]
-name = "The Legend of Zelda: The Minish Cap"
-short_name = "minish_cap"
+name = "Metroid Fusion"
+short_name = "metroid_fusion"
 default_region = "usa"
 [bios]
 path = "bios/open_gba_bios.firmware"
 sha1 = "2e41f9d30ecdf1c4540edf89ac16f49bf327edb7"
 [rom]
-path = "roms/minishcap_usa.gba"
-sha1 = "b4bd50e4131b027c334547b4524e2dbbd4227130"
+path = "roms/fusion_usa.gba"
+sha1 = "ca33f4348c2c05dd330d37b97e2c5a69531dfe87"
 [save]
-type = "eeprom"
-size = "0x2000"
-path = "saves/minishcap.sav"
+type = "sram"
+size = "0x8000"
+path = "saves/fusion.sav"
 [video]
 screen = "backlit"
 [audio]
 shadow = false
 [runtime]
-window_title = "Minish Cap"
-debug_port = 19842
+window_title = "Metroid Fusion"
+debug_port = 19844

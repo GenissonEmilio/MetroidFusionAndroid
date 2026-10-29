@@ -1,16 +1,15 @@
 #pragma once
 #include <cstdint>
-
-namespace minish {
+namespace fusion {
 struct MenuSnapshot {
-    std::uint8_t task, state, substate, phase, subtask, menu_phase, screen;
+    std::uint16_t mode;
+    std::uint8_t pause_flag,phase,screen,substage;
 };
-// USA metadata only: pinned zeldaret/tmc main.h, game.h, subtask.h,
-// pauseMenu.h and linker.ld (5ab63f00). No guest code or memory is changed.
+// USA metadata: gMainGameMode, gPauseScreenFlag, gUnk_3000b85 and
+// gNonGameplayRam.pauseScreenData. Manual pause is flag 2; navigation dialogs,
+// map downloads, sleep, fades and status transitions must retain native input.
 inline bool album_in_inventory(const MenuSnapshot& s) {
-    const bool page=s.screen==1 || s.screen==2 || s.screen==4 || s.screen==5 ||
-        s.screen==6 || s.screen==7 || s.screen==8;
-    return s.task==2 && s.state==2 && s.substate==7 && s.phase==2 &&
-        s.subtask==1 && s.menu_phase==2 && page;
+    return s.mode==3 && s.pause_flag==2 && s.phase==2 &&
+        (s.screen==0 || s.screen==1) && s.substage==0;
 }
 }

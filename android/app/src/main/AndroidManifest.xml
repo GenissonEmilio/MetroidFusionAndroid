@@ -4,8 +4,8 @@
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <application android:allowBackup="false" android:hardwareAccelerated="true"
-        android:icon="@drawable/ic_crest" android:label="${minishAppLabel}"
-        android:resizeableActivity="true" android:theme="@style/MinishTheme">
+        android:icon="@drawable/ic_crest" android:label="${fusionAppLabel}"
+        android:resizeableActivity="true" android:theme="@style/FusionTheme">
         <meta-data android:name="gbarecomp.title" android:value="${gbaTitle}" />
         <meta-data android:name="gbarecomp.rom_label" android:value="${gbaRomLabel}" />
         <meta-data android:name="gbarecomp.rom_sha1" android:value="${gbaRomSha1}" />
@@ -17,7 +17,7 @@
         <meta-data android:name="gbarecomp.payload_version" android:value="${gbaPayloadVersion}" />
         <meta-data android:name="gbarecomp.setup_note" android:value="" />
         <meta-data android:name="gbarecomp.gyro" android:value="false" />
-        <activity android:name=".ZeldaSetupActivity" android:exported="true"
+        <activity android:name=".FusionSetupActivity" android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:screenOrientation="sensorLandscape">
             <intent-filter>
@@ -25,11 +25,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ZeldaGameActivity" android:exported="false"
+        <activity android:name=".FusionGameActivity" android:exported="false"
             android:screenOrientation="sensorLandscape" android:launchMode="singleTask"
             android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation|density"
             android:preferMinimalPostProcessing="true" />
-        <activity android:name=".ZeldaAlbumActivity" android:exported="false"
+        <activity android:name=".FusionAlbumActivity" android:exported="false"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>

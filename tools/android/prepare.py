@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-ROM_SHA = "b4bd50e4131b027c334547b4524e2dbbd4227130"
+ROM_SHA = "ca33f4348c2c05dd330d37b97e2c5a69531dfe87"
 BIOS_SHA = "2e41f9d30ecdf1c4540edf89ac16f49bf327edb7"
 
 def publish_generated(source, destination):
@@ -34,15 +34,15 @@ def load_rom(path):
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
             candidates = [e for e in archive.infolist() if not e.is_dir() and e.filename.lower().endswith((".gba", ".agb"))]
-            if len(candidates) != 1 or candidates[0].file_size != 16777216:
-                raise ValueError("ZIP must contain exactly one 16 MiB USA .gba file")
+            if len(candidates) != 1 or candidates[0].file_size != 8388608:
+                raise ValueError("ZIP must contain exactly one 8 MiB USA .gba file")
             data = archive.read(candidates[0])
     else:
-        if path.stat().st_size != 16777216:
-            raise ValueError("USA ROM must be 16 MiB")
+        if path.stat().st_size != 8388608:
+            raise ValueError("USA ROM must be 8 MiB")
         data = path.read_bytes()
     if hashlib.sha1(data).hexdigest() != ROM_SHA:
-        raise ValueError("ROM SHA-1 mismatch: unmodified Minish Cap (USA) required")
+        raise ValueError("ROM SHA-1 mismatch: unmodified Metroid Fusion (USA) required")
     return data
 
 def main():
@@ -56,7 +56,7 @@ def main():
         raise ValueError("Open firmware integrity check failed")
     if not args.tool.is_file():
         raise ValueError("Build the host gba_recompile tool first; see ANDROID.md")
-    rom = ROOT / "roms/minishcap_usa.gba"
+    rom = ROOT / "roms/fusion_usa.gba"
     rom.parent.mkdir(exist_ok=True)
     if not rom.exists() or hashlib.sha1(rom.read_bytes()).hexdigest() != ROM_SHA:
         with tempfile.NamedTemporaryFile(dir=rom.parent, delete=False) as out:
@@ -68,14 +68,14 @@ def main():
     with tempfile.TemporaryDirectory(prefix="codegen-", dir=ROOT / "build") as temp:
         staging = pathlib.Path(temp)
         run("--bios", str(firmware), "--config", "config/open_bios.toml", "--out", str(staging / "bios"))
-        run("--rom", str(rom), "--config", "symbols/minishcap.toml",
-            "--config", "symbols/minishcap_reviewed.toml", "--symbols", "symbols/imported_symbols.tsv",
-            "--data-symbols", "symbols/imported_data_symbols.tsv",
+        run("--rom", str(rom), "--config", "symbols/fusion_usa.toml",
+            "--config", "symbols/fusion_reviewed.toml", "--symbols", "symbols/fusion_functions.tsv",
+            "--data-symbols", "symbols/fusion_data.tsv",
             # Default 4096 is a bring-up budget. Required symbol closure already
             # exceeds it, starving later automatic RAM/callback roots.
             "--max-functions", "100000", "--out", str(staging / "rom"))
         dispatch = (staging / "rom/dispatch_table.cpp").read_text()
-        for pc in ("0300643C", "030065A8"):
+        for pc in ("03000BE8", "03003658", "03003CB4", "03003D5C"):
             if f"0x{pc}u" not in dispatch:
                 raise ValueError(f"Missing observed RAM continuation {pc}; generation incomplete")
         publish_generated(staging / "bios", ROOT / "generated/open_bios")

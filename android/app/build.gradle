@@ -1,23 +1,24 @@
 plugins { id 'com.android.application' }
 ext.gbaGame = [
-    applicationId: 'io.github.genissonemilio.minishcap', versionCode: 5, versionName: '0.3.1',
-    title: 'Minish Cap', romSha1: ['b4bd50e4131b027c334547b4524e2dbbd4227130'],
-    romSize: 16777216, romFile: 'minishcap_usa.gba', variant: 'minishcap',
+    applicationId: 'io.github.genissonemilio.metroidfusion', versionCode: 1, versionName: '0.1.0-dev',
+    title: 'Metroid Fusion', romSha1: ['ca33f4348c2c05dd330d37b97e2c5a69531dfe87'],
+    romSize: 8388608, romFile: 'fusion_usa.gba', variant: 'fusion',
     biosRequired: false, biosSha1: '2e41f9d30ecdf1c4540edf89ac16f49bf327edb7',
     gameToml: rootProject.file('game_android.toml'), gameRoot: rootProject.file('..'),
     engineRoot: rootProject.file('../gbarecomp'), recompUiRoot: rootProject.file('../recomp-ui'),
     payloadVersion: '1', orientation: 'landscape', debugAbis: ['arm64-v8a'], nativeJobs: 2,
-    payloadDirs: [[from: rootProject.file('firmware'), into: 'bios'],
-                  [from: rootProject.file('../mods/preloaded'), into: 'mods']]
+    cmakeArguments: ["-DFUSION_QA_FAST_BUILD=" +
+        (providers.gradleProperty('fusionQaFastBuild').orNull == 'true' ? 'ON' : 'OFF')],
+    payloadDirs: [[from: rootProject.file('firmware'), into: 'bios']]
 ]
 apply from: '../../gbarecomp/platform/android/gbarecomp-app.gradle'
 apply from: '../sdl-java.gradle'
 android {
     buildToolsVersion '35.0.0'
     defaultConfig {
-        def albumTest = providers.gradleProperty('minishAlbumTest').orNull == 'true'
+        def albumTest = providers.gradleProperty('fusionAlbumTest').orNull == 'true'
         if (albumTest) applicationIdSuffix '.albumtest'
-        manifestPlaceholders.minishAppLabel = albumTest ? 'Minish Cap - Album teste' : '@string/app_name'
+        manifestPlaceholders.fusionAppLabel = albumTest ? 'Metroid Fusion - Album teste' : '@string/app_name'
     }
     buildFeatures.buildConfig = true
     ndkVersion '28.2.13676358'
