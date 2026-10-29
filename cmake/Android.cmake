@@ -12,12 +12,14 @@ endif()
 add_subdirectory("${GBARECOMP_ROOT}" gbarecomp_build EXCLUDE_FROM_ALL)
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/AndroidRenderer.cmake")
 file(GLOB MINISH_GENERATED CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/generated/*.cpp")
-option(FUSION_QA_FAST_BUILD "Unoptimized generated corpus for local x86_64 QA only" OFF)
+option(FUSION_QA_FAST_BUILD "Lightly optimized generated corpus for local x86_64 QA only" OFF)
 if(FUSION_QA_FAST_BUILD)
     if(NOT ANDROID_ABI STREQUAL "x86_64")
         message(FATAL_ERROR "FUSION_QA_FAST_BUILD is reserved for the x86_64 QA emulator")
     endif()
-    set_source_files_properties(${MINISH_GENERATED} PROPERTIES COMPILE_OPTIONS "-O0")
+    # Native dispatch relies on sibling tail-call elimination. O0 grows the
+    # host stack across guest jump cycles, even when the guest stack is flat.
+    set_source_files_properties(${MINISH_GENERATED} PROPERTIES COMPILE_OPTIONS "-O1;-foptimize-sibling-calls")
 endif()
 add_library(main SHARED src/main.cpp src/android_port.cpp
     src/photo_menu.cpp src/game_photo_album.cpp ${MINISH_GENERATED})
