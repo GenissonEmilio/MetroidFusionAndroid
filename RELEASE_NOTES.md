@@ -1,4 +1,4 @@
-# 0.1.0-dev
+# 0.1.0
 
 Primeira adaptação de desenvolvimento de Metroid Fusion USA para Android ARM64.
 
@@ -9,3 +9,5 @@ Primeira adaptação de desenvolvimento de Metroid Fusion USA para Android ARM64
 - Controles touch com motivos de visor, feixe e míssil; Scale2x e pixel perfeito.
 
 Consulte VALIDATION_ANDROID.md para resultados e limites das verificações.
+
+Atualização do APK: nome exibido **Metroid Fusion**, versão interna `0.1.0`, código 2. Mantém o identificador histórico e o certificado da primeira distribuição para preservar saves, fotos e preferências na instalação existente. Instale sobre o app atual, sem desinstalar.

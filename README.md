@@ -6,7 +6,7 @@ Jogo e BIOS aberta recompilados localmente. O APK não inclui ROM, fontes extra�
 
 ## Estado
 
-Primeira versão de desenvolvimento, `0.1.0-dev`. Veja [VALIDATION_ANDROID.md](VALIDATION_ANDROID.md) para verificações executadas e testes pendentes. A campanha inteira ainda exige QA.
+Primeira versão, `0.1.0`. Veja [VALIDATION_ANDROID.md](VALIDATION_ANDROID.md) para verificações executadas e testes pendentes. A campanha inteira ainda exige QA.
 
 ## Jogar e fotografar
 
@@ -17,7 +17,7 @@ Primeira versão de desenvolvimento, `0.1.0-dev`. Veja [VALIDATION_ANDROID.md](V
 - Até 200 fotos locais, seis por página; o álbum não altera o save SRAM.
 - A biblioteca Android permite anotações, zoom e exportação por ação do jogador.
 
-Saves de 32 KiB, estados rápidos e preferências usam `io.github.genissonemilio.metroidfusion`, separado do Zelda. A compilação de testes acrescenta `.albumtest`.
+Saves de 32 KiB, estados rápidos, fotos e preferências usam `io.github.genissonemilio.metroidfusion.albumtest`, separado do Zelda. Esse identificador histórico é mantido para atualizar a instalação existente sem apagar seus dados. O nome exibido é **Metroid Fusion**. Instale a atualização sobre o app existente, sem desinstalá-lo.
 
 ## Compilar
 

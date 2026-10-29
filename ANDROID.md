@@ -16,11 +16,13 @@ No Windows, use um prompt de desenvolvimento do Visual Studio e `gba_recompile.e
 
 `prepare.py` verifica SHA-1/tamanho antes de copiar a ROM para `roms/fusion_usa.gba`; recompila BIOS e cartucho para `generated/`. Esses dados são ignorados pelo Git. Não edite código gerado.
 
-Para instalação de testes independente: acrescente `-PfusionAlbumTest=true`. Saída: `android/app/build/outputs/apk/release/app-release.apk`. Versão `0.1.0-dev`, código 1. O APK distribuível nunca usa `-PprivateRom`.
+Saída: `android/app/build/outputs/apk/release/app-release.apk`. Versão `0.1.0`, código 2, nome **Metroid Fusion**. O identificador publicado permanece `io.github.genissonemilio.metroidfusion.albumtest` em todas as compilações; o antigo argumento `-PfusionAlbumTest=true` não é mais necessário. O namespace Java continua `io.github.genissonemilio.metroidfusion`. O APK distribuível nunca usa `-PprivateRom`.
 
 ## Assinatura
 
-Antes da primeira release, configure uma chave estável em `android/signing.local.properties` (ignorado): `storeFile`, `storePassword`, `keyAlias`, `keyPassword`; ou `signingProperties` apontando para arquivo central local. Sem chave, a base assina com a chave de debug e mostra aviso. Preserve a chave para atualizações.
+A release 0.1.0 inicial usou a chave de debug local. Atualizações dessa instalação devem preservar essa mesma chave: confira o certificado do APK anterior com `apksigner verify --print-certs` antes de publicar. Não gere outra chave nem desinstale o aplicativo para atualizar.
+
+Para indicar a chave existente, use `android/signing.local.properties` (ignorado): `storeFile`, `storePassword`, `keyAlias`, `keyPassword`; ou `signingProperties` apontando para arquivo central local. Sem configuração, a base usa a chave de debug local. Preserve uma cópia segura dessa chave fora do Git para futuras atualizações.
 
 ## Metadados e fonte
 

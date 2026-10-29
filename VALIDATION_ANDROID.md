@@ -1,4 +1,4 @@
-# Validação — Metroid Fusion Android 0.1.0-dev
+# Validação — Metroid Fusion Android 0.1.0
 
 Data: 29/10/2026. Primeira adaptação, sem declaração de campanha completa validada.
 
@@ -45,3 +45,11 @@ Data: 29/10/2026. Primeira adaptação, sem declaração de campanha completa va
 ## Pendências de aceitação
 
 Campanha completa, áudio normal e desempenho em ARM64 físico, controle Bluetooth/USB, suspensão/retomada sob pressão de memória e importação/exportação pelo seletor real Android exigem QA do dono. Outras regiões e ROMs modificadas não são suportadas.
+
+## Atualização dos metadados da release 0.1.0
+
+- Após aprovação funcional do APK pelo dono, o nome exibido passou a Metroid Fusion, versão interna 0.1.0 e código 2. O pacote publicado io.github.genissonemilio.metroidfusion.albumtest tornou-se o padrão; o namespace Java foi mantido. Nenhuma rotina de armazenamento foi alterada.
+- ARM64: assembleRelease e lintRelease passaram (0 erros, 71 avisos). Auditoria, assinatura e alinhamento de 16 KiB passaram. As três bibliotecas nativas são idênticas, byte a byte, às do APK anterior.
+- Certificado SHA-256 igual nos dois APKs: e10241d29291554e3e25e3ac540e8d2db293406518bb47807e4f523dbf868a86.
+- Atualização Android API 28 x86_64 por install -r, sem desinstalar: UID 10067 preservado, código 1 -> 2 e versão 0.1.0-dev -> 0.1.0. SHA-256 do SRAM de 32 KiB, duas fotos PNG, seus dois arquivos de metadados e o estado de suspensão ficaram exatamente iguais antes/depois. O launcher abriu com a ROM já importada.
+- APK atualizado: MetroidFusion-0.1.0-arm64.apk, SHA-256 e7d729a1aac66308fecd64b3d699938e5403cb6bfa815726bc86267908075781. Para preservar os dados no aparelho, instalar sobre a versão existente sem desinstalá-la.
