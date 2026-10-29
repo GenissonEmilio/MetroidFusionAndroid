@@ -30,12 +30,17 @@ Data: 29/10/2026. Primeira adaptação, sem declaração de campanha completa va
 
 ## Android e entrega
 
-- assembleRelease ARM64 e lintRelease: passaram.
+- assembleRelease ARM64 e lintRelease: passaram (0 erros, 72 avisos de lint).
 - Pacote independente de testes: io.github.genissonemilio.metroidfusion.albumtest, versão 0.1.0-dev/código 1.
 - Auditoria: sem ROM, assets extraídos, BIOS Nintendo, saves ou chaves no APK; firmware aberto com licença incluída.
 - zipalign com páginas de 16 KiB e verificação de assinatura: passaram.
 - Chave usada no APK de testes: debug local. Antes de uma release pública, escolher e preservar uma chave estável.
-- QA Android do fluxo completo da câmera está em andamento; resultado final será registrado após a instalação de teste.
+- Android API 28 x86_64: instalação, launcher, pausa manual, Álbum, câmera, captura, miniatura, visualização e volta ao gameplay passaram por toques no aplicativo real. Mapa -> Álbum -> Status -> Álbum -> Mapa funcionou nos dois sentidos.
+- A sessão Android começou de um estado local real da partida no frame 25.571, produzido pelo host; isso não substitui a validação de uma campanha iniciada no Android. O Android usa scanlines LLE. Modo estrito confirmado no log, sem misses de dispatch, interpretação ou código curado até o frame 34.553 observado.
+- Duas fotos de 240x160 foram gravadas, com metadados de área 0, sala 0 e posição 1600/715. O PNG foi inspecionado sem o álbum ou controles sobrepostos. O SHA-256 do SRAM permaneceu 8dcf14da2f562e04c8840adc743a382181a06b117362b2d2d68ebb9c1bba6e43 antes/depois da segunda captura.
+- Background salvou o estado no frame 32.268; encerramento do processo e reabertura retomaram a partida. As duas fotos continuaram no álbum. A consulta TCP inicial após o relançamento chegou antes da inicialização do servidor; uma conexão nova confirmou a retomada, sem crash.
+- A primeira compilação rápida de QA x86_64 com -O0 estourou a pilha em um ciclo de saltos recompilados. A opção de QA foi corrigida para -O1 com otimização de chamadas finais e o fluxo completo foi repetido com sucesso. A entrega ARM64 usa a otimização normal -O2; a opção de QA é restrita a x86_64 e fica desligada por padrão.
+- APK entregue: MetroidFusion-0.1.0-dev-album-test-arm64.apk, SHA-256 0e7699f77407d8e7fc7cdbea3bbb4dee9ecf6a921214582b94298e2144bf7c7a.
 
 ## Pendências de aceitação
 
