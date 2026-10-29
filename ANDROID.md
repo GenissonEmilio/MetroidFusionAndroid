@@ -1,249 +1,40 @@
-# Minish Cap para Android
+# Compilação Android
 
-Aplicativo independente para Android 9 ou mais recente, **ARM64**. O jogo é
-executado pelo gbarecomp a partir de um corpus C++ gerado para a versão USA.
-A interface Android, o importador e os controles touch são deste fork.
+Requer Git, Python 3.11+, CMake 3.20+, compilador C++20, JDK 17+, Android SDK 35, Build Tools 35.0.0, NDK 28.2.13676358 e CMake Android 3.31.6.
 
-## Instalação e uso
-
-1. Instale o APK ARM64 da seção Releases deste repositório.
-2. Toque em **Importar ROM** e escolha sua cópia `.gba` ou um `.zip` contendo
-   uma única ROM americana original, sem tradução ou patches.
-3. Após a confirmação, toque em **Jogar**. Uma cópia verificada fica no
-   armazenamento privado do aplicativo; o ZIP original pode ser removido.
-4. Direcional: movimento; A/B e L/R: botões do GBA; START/SELECT: os botões
-   correspondentes. Deslizar no direcional permite diagonais, e os botões
-   aceitam múltiplos toques ao mesmo tempo.
-5. **MENU**, Voltar do Android ou um toque com três dedos abre o menu do
-   runtime, com pausa, estados rápidos e ajustes de apresentação/áudio.
-   **System → Voltar para o inicio** encerra a partida e retorna à biblioteca.
-6. **Controles**, na tela inicial, ajusta tamanho e opacidade para a próxima
-   partida. O runtime também aceita controles físicos via SDL2; a validação
-   de controle físico depende de um dispositivo compatível conectado.
-   A mesma tela permite ligar ou silenciar o som para a próxima partida.
-7. **Imagem** oferece **Suave (Scale2x)**, ativado por padrão, e **Pixel
-   perfeito**. Suave arredonda contornos escolhendo cores da própria arte,
-   sem o borrado de interpolação bilinear. Pixel perfeito mantém os pixels
-   originais em blocos uniformes. Durante a partida, troque em **MENU →
-   Graphics → Estilo dos pixels**, com efeito imediato e escolha salva.
-8. Abra **START → Itens → R → Álbum de Hyrule**. A nova página fica entre
-   Itens e Status, na mesma sequência L/R do inventário, com arte em 240×160.
-   O direcional seleciona **Camera** ou uma das seis miniaturas; **A** abre a
-   câmera ou a imagem, e **B** retorna. Nas bordas de uma linha, esquerda e
-   direita passam às outras páginas de fotos. **L/R** troca de aba do jogo;
-   **START** fecha o inventário, inclusive na câmera e na visualização.
-9. Na câmera, **A** fotografa a última cena completa antes de abrir o
-   inventário. **B** retorna ao álbum. A imagem salva não contém moldura,
-   inventário ou controles touch. PNG e miniaturas são processados fora da
-   thread do jogo; a câmera mostra a confirmação **LEMBRANCA GUARDADA!**.
-   O inventário continua respeitando os bloqueios normais da história.
-
-O álbum do jogo usa os mesmos arquivos da galeria acessível pela tela inicial
-ou por **MENU → Album → Gerenciar fotos e anotacoes**. Essa galeria Android
-mostra título, data e anotações. Use dois dedos para ampliar, arraste para explorar ou dê dois
-toques para ampliar/restaurar. **Anotar** nomeia o local e registra o que
-revisitar; **Exportar PNG** usa o seletor Android para guardar uma cópia;
-**Excluir** pede confirmação. Até 200 capturas ficam no diretório privado
-`captures/`, separado do save. Nenhuma captura antiga é apagada automaticamente.
-Atualizações assinadas conservam imagens e notas. Para guardar imagens fora
-dos dados do aplicativo, exporte os PNGs antes de desinstalar.
-
-Os controles usam ícones vetoriais originais de espada, escudo, pena, gorro,
-mapa, bolsa e brasão. As letras A/B/L/R continuam visíveis; os ícones são
-decorativos e não mudam os itens equipados ou as funções originais dos botões.
-
-A página é uma extensão C++ do menu de pausa: um hook no subtask original
-insere Álbum entre Itens e Status e assume seus comandos enquanto a página
-está visível. A câmera e a visualização usam o renderer do jogo, sem trocar
-de Activity Android. O framebuffer original e a ROM permanecem intactos.
-Offsets e navegação são restritos à USA verificada; a configuração de hooks
-fica em `symbols/minishcap_reviewed.toml`. O código gerado é regenerado.
-
-Na versão 0.3.1, a página mantém o fundo e a moldura originais apresentados
-pelo jogo, incluindo abas L/R e indicadores A/B. Apenas o título, o conteúdo
-interno e a descrição são compostos pelo álbum. As letras são decodificadas
-da fonte da ROM USA carregada, sem distribuir uma cópia desses gráficos.
-A troca usa uma transição de oito quadros de guest; redesenhar o mesmo quadro
-não acelera a animação, e os comandos originais não são atrasados.
-
-Os dois estilos conservam a proporção original de 240×160. A ampliação usa
-passos inteiros: no modo Suave, também os subpixels do filtro têm tamanho
-uniforme. Isso pode deixar margens em telas com outras resoluções. No POCO
-2772×1280, ambos exibem o jogo em 1920×1280, centralizado. O filtro atua só
-na apresentação, depois da correção de cores; não altera ROM, save, raster
-do GBA ou hashes de estado. A interface e os controles permanecem nítidos.
-O filtro não se acumula sobre o raster HD opcional do upstream.
-
-O save normal do cartucho é local (`saves/minishcap.sav`, EEPROM de 8 KiB).
-Use **Exportar save** para guardar uma cópia fora do aplicativo. Estados
-rápidos são separados desse save. Desinstalar o aplicativo apaga seus dados
-privados; uma atualização assinada com a mesma chave preserva esses dados.
-O processo de importação não envia sua ROM para servidores. O APK de release
-não solicita acesso à rede nem permissão geral de armazenamento.
-
-## Identidade dos dados
-
-| Arquivo | Tamanho | SHA-1 |
-|---|---:|---|
-| The Minish Cap (USA) | 16.777.216 | `b4bd50e4131b027c334547b4524e2dbbd4227130` |
-| Cult of GBA BIOS substituta | 16.384 | `2e41f9d30ecdf1c4540edf89ac16f49bf327edb7` |
-
-O APK contém a BIOS **aberta**, sob MIT, e seu aviso de licença. Não contém
-uma BIOS proprietária da Nintendo nem o arquivo ROM do jogo. A BIOS aberta
-tem um corpus separado e os vetores SWI/IRQ próprios; a configuração da BIOS
-original usada pelo upstream permanece disponível para desenvolvedores.
-
-Base: [MinishCapRecomp](https://github.com/mstan/MinishCapRecomp), commit
-`63993a51fb6c6410730c96f37cfb03f7e087c001`, e os submódulos fixados no Git.
-É a mesma família do [FireRedLeafGreenRecomp](https://github.com/mstan/FireRedLeafGreenRecomp)
-solicitado como referência. Os símbolos do Zelda vêm do trabalho do
-[zeldaret/tmc](https://github.com/zeldaret/tmc); não se usa o jogo Pokémon
-como substituto do código Zelda.
-
-## Compilação
-
-Dependências testadas: JDK 21, Python 3.11+, CMake/Ninja e compilador host C++20;
-Android SDK 35, build-tools 35.0.0, NDK 28.2.13676358 e CMake do SDK 3.31.6.
-O wrapper fixa Gradle 8.12 e o projeto fixa AGP 8.7.3.
-
-```bash
-git clone --recursive https://github.com/GenissonEmilio/ZeldaMinishCapAndroid.git
-cd ZeldaMinishCapAndroid
-cmake -S gbarecomp -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build/host --target gba_recompile -j2
-python3 tools/android/prepare.py --rom '/caminho/MinishCap-USA.zip'
-export ANDROID_HOME='/caminho/android-sdk'
-tools/android/build.sh Release
+```sh
+git clone --recurse-submodules https://github.com/GenissonEmilio/MetroidFusionAndroid.git
+cd MetroidFusionAndroid
+cmake -S gbarecomp -B build/host-tools -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/host-tools --target gba_recompile --parallel 2
+python tools/android/prepare.py --rom /caminho/MetroidFusionUSA.gba --tool build/host-tools/gba_recompile
+cd android
+./gradlew --no-daemon :app:assembleRelease :app:lintRelease -PgbaNativeJobs=2
 ```
 
-O APK sai em `android/app/build/outputs/apk/release/app-release.apk`.
-Para validar o álbum sem substituir uma instalação existente, acrescente
-`-PminishAlbumTest=true` ao comando Gradle. Esse APK aparece como
-**Minish Cap - Album teste** e usa um armazenamento separado (`.albumtest`);
-importe a ROM nessa instalação. A opção não altera o pacote normal.
-O script de geração verifica hashes, aplica `symbols/minishcap_reviewed.toml`
-e conserva o mtime dos arquivos cujo conteúdo não mudou, para reaproveitar a
-compilação incremental. O corpus fica ignorado em `generated/`: não o envie
-ao Git. Nunca corrija o código gerado manualmente.
+No Windows, use um prompt de desenvolvimento do Visual Studio e `gba_recompile.exe`. ZIP também é aceito. Configure `android/local.properties` com `sdk.dir` ou defina `ANDROID_HOME`.
 
-A geração usa orçamento de 100.000 funções, acima do limite inicial de
-bring-up do motor. Isso permite concluir a descoberta automática de callbacks
-e continuações na RAM depois das raízes obrigatórias do Zelda; o orçamento
-anterior deixava código descoberto pendente. O script confere as continuações
-observadas em teste antes de substituir o corpus existente.
+`prepare.py` verifica SHA-1/tamanho antes de copiar a ROM para `roms/fusion_usa.gba`; recompila BIOS e cartucho para `generated/`. Esses dados são ignorados pelo Git. Não edite código gerado.
 
-Se preferir JDK e ferramentas host isolados:
+Para instalação de testes independente: acrescente `-PfusionAlbumTest=true`. Saída: `android/app/build/outputs/apk/release/app-release.apk`. Versão `0.1.0-dev`, código 1. O APK distribuível nunca usa `-PprivateRom`.
 
-```bash
-docker build -t minishcap-tools -f tools/android/Dockerfile .
-docker run --rm --cpus=2 --user "$(id -u):$(id -g)" -e HOME=/tmp \
-  -v "$PWD:/src:z" -w /src minishcap-tools \
-  sh -c 'cmake -S gbarecomp -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build/host --target gba_recompile -j2'
-docker run --rm --cpus=2 --user "$(id -u):$(id -g)" -e HOME=/tmp \
-  -v "$PWD:/src:z" -w /src minishcap-tools \
-  python3 tools/android/prepare.py --rom roms/minishcap_usa.gba
-docker run --rm --cpus=2 --user "$(id -u):$(id -g)" -e HOME=/tmp \
-  -e ANDROID_HOME=/sdk -e ANDROID_USER_HOME=/src/artifacts/android-user-home \
-  -e GRADLE_USER_HOME=/src/artifacts/gradle-home \
-  -v "$PWD:/src:z" -v "$ANDROID_HOME:/sdk:z" -w /src minishcap-tools \
-  tools/android/build.sh Release
+## Assinatura
+
+Antes da primeira release, configure uma chave estável em `android/signing.local.properties` (ignorado): `storeFile`, `storePassword`, `keyAlias`, `keyPassword`; ou `signingProperties` apontando para arquivo central local. Sem chave, a base assina com a chave de debug e mostra aviso. Preserve a chave para atualizações.
+
+## Metadados e fonte
+
+Metadados USA já versionados. Atualização: `python tools/import_fusion_symbols.py --reference /caminho/mf-zm-info`; revise o diff e `symbols/fusion_reference.txt`. `fusion_reviewed.toml` declara quatro cópias IWRAM e o hook do menu.
+
+Fonte lida da ROM em execução: `text_characters.gfx` em `0x08682FAC`, larguras em `0x08576234`, mapeamento latino do Fusion USA. Nenhum bitmap extraído é incluído no APK.
+
+## Verificar
+
+```sh
+python tools/android/check_sources.py
+c++ -std=c++17 -O2 -Isrc tests/photo_menu_test.cpp src/photo_menu.cpp -o build/photo-menu-test
+build/photo-menu-test
+python tools/android/audit_apk.py android/app/build/outputs/apk/release/app-release.apk
 ```
 
-No Fedora, `:z` permite acesso do contêiner aos arquivos por SELinux. O Docker
-não recebe acesso USB; instalação e testes ADB acontecem no host.
-
-### Assinatura e atualizações
-
-Configure uma chave estável antes de distribuir. O template aceita
-`android/signing.local.properties` (ignorado no Git):
-
-```properties
-storeFile=/caminho/absoluto/minishcap.jks
-storePassword=SUA_SENHA
-keyAlias=minishcap
-keyPassword=SUA_SENHA
-```
-
-O caminho deve existir no ambiente que executa Gradle (dentro do contêiner,
-se for usado). Não compartilhe esse arquivo nem a chave. Guarde backup fora
-da pasta de build; perder a chave impede atualizar instalações existentes.
-Sem configuração, o template usa uma chave de debug e avisa no build.
-
-## Validação reproduzível
-
-O workflow `Android source validation` verifica a integridade do firmware,
-ausência de arquivos privados versionados, sintaxe dos scripts e o importador
-Java com entradas inválidas, ZIP truncado, tamanho/hash errados e limite de
-descompressão. Testes também verificam que falhas preservam a importação
-anterior e não deixam arquivos temporários. CI não recebe ROM nem BIOS Nintendo;
-o build completo requer que o proprietário forneça a ROM localmente.
-
-```bash
-python3 tools/android/check_sources.py
-mkdir -p build/import-test
-javac -d build/import-test android/app/src/main/java/io/github/genissonemilio/minishcap/RomImporter.java tools/android/RomImporterTest.java
-java -cp build/import-test io.github.genissonemilio.minishcap.RomImporterTest roms/minishcap_usa.gba
-python3 tools/android/audit_apk.py android/app/build/outputs/apk/release/app-release.apk
-```
-
-Builds de debug aceitam `--ez qa true` na Activity inicial. Esse modo habilita
-somente o observador local e direciona o áudio para saída dummy durante testes
-automáticos. Builds de release ignoram esse sinalizador. Com a partida aberta:
-
-```bash
-adb shell am start -n io.github.genissonemilio.minishcap/.ZeldaSetupActivity --ez qa true
-python3 tools/android/device_probe.py --seconds 20
-python3 tools/android/validate_touch.py
-```
-
-O relatório compara quadros do jogo com tempo monotônico real e consulta o
-contador de misses do recompiler. FPS de guest não é taxa de atualização do
-painel. Qualquer ponte por interpretação/cache nativo deve ser reportada;
-nenhum teste curto prova cobertura estática de toda a campanha. O recurso de
-visão ampliada do upstream continua opcional e desligado por padrão.
-
-O adaptador em `cmake/AndroidRenderer.cmake` prepara cópias dos dois fontes
-de apresentação do motor, com âncoras exatas que exigem revisão quando o
-submódulo muda. O checkout original e o código derivado da ROM ficam
-intactos. `src/pixel_filter.h` implementa independentemente as regras
-publicadas de [Scale2x](https://www.scale2x.it/algorithm).
-
-O workflow também verifica os 512 padrões binários de vizinhança, bordas,
-cores RGB, escalas em várias resoluções e a saída real do renderer SDL por
-software, alternando os modos. Para executar esse teste sem ROM:
-
-```bash
-mkdir -p build/pixel-test
-g++ -std=c++17 -O2 -DMINISH_TEST_SDL -Isrc tests/pixel_filter_test.cpp src/pixel_presenter.cpp $(sdl2-config --cflags --libs) -o build/pixel-test/check
-SDL_VIDEODRIVER=dummy build/pixel-test/check
-```
-
-Esse teste também confere a captura antes das camadas de interface e o
-reconhecimento restrito do inventário. A persistência do álbum pode ser
-validada sem Android nem ROM:
-
-```bash
-mkdir -p build/album-test
-javac -d build/album-test android/app/src/main/java/io/github/genissonemilio/minishcap/CaptureStore.java tools/android/CaptureStoreTest.java
-java -cp build/album-test io.github.genissonemilio.minishcap.CaptureStoreTest
-```
-
-A navegação e o estado da nova página têm um teste independente de ROM/SDL:
-
-```bash
-mkdir -p build/photo-test
-g++ -std=c++17 -O2 -Wall -Wextra -Isrc tests/photo_menu_test.cpp src/photo_menu.cpp -o build/photo-test/check
-build/photo-test/check
-```
-
-Ele verifica entrada pelos dois lados, propriedade dos comandos, retorno ao
-menu nativo, paginação, respostas assíncronas antigas, limites e igualdade
-byte a byte entre a cena recebida e a captura entregue ao armazenamento.
-
-Para repetir o teste com interpretação/cache desativados, acrescente
-`--ez qa_strict true` ao comando que inicia a tela principal. Os registros
-existentes do motor ficam em `files/diagnostics/native.log`, no armazenamento
-privado; builds de debug permitem consultá-los por `adb shell run-as`.
-
-As evidências do aparelho e as limitações observadas ficam em
-[VALIDATION_ANDROID.md](VALIDATION_ANDROID.md).
+CI verifica importação transacional, armazenamento do álbum e SDL/Scale2x sem ROM. Execução real exige a cópia local. Builds debug aceitam extra de Intent `qa=true`, com áudio automatizado mudo; `qa_strict=true` proíbe fallback interpretado.

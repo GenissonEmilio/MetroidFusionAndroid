@@ -1,249 +1,47 @@
-# Validação Android
+# Validação — Metroid Fusion Android 0.1.0-dev
 
-## Entrega pública 0.3.1 (28 de outubro de 2026)
+Data: 29/10/2026. Primeira adaptação, sem declaração de campanha completa validada.
 
-O proprietário aprovou a versão 0.3.1 no aparelho, incluindo o visual do
-álbum integrado, conforme registrado na
-[PR #1](https://github.com/GenissonEmilio/ZeldaMinishCapAndroid/pull/1).
-A PR foi revisada e integrada ao `main` no commit `45dc028`.
+## Entrada e geração
 
-Nesta máquina Linux, a validação para publicação foi repetida com JDK 21,
-SDK 35, build-tools 35.0.0, NDK 28.2.13676358 e CMake 3.31.6:
+- ZIP do dono: uma ROM USA de 8.388.608 bytes, AMTE, SHA-1 ca33f4348c2c05dd330d37b97e2c5a69531dfe87, CRC32 6C75479C.
+- Vetor ARM para 0x080000C0 conferido nos bytes do cartucho.
+- 3.607 funções USA importadas como metadados, 13.276 nomes de dados; fonte e larguras conferidas na ROM local.
+- IRQ em IWRAM e três wrappers Thumb/corpos ARM de áudio declarados por seus intervalos de cópia. Hook do álbum em PauseScreenCallCurrentHandler, 0x080770B4.
+- Nenhuma implementação decompilada do jogo entra no executável; fontes geradas e dados da ROM ficam ignorados pelo Git.
 
-- Testes da página de fotos, captura limpa, paginação, callbacks antigos,
-  moldura e transições: passaram, inclusive com AddressSanitizer e
-  UndefinedBehaviorSanitizer.
-- Renderer SDL/Scale2x, oito verificações do importador com a ROM USA,
-  persistência/anotações/limites do álbum, integridade das fontes e firmware,
-  sintaxe Python e shell: passaram.
-- Recompiler host reconstruído e corpus regenerado: oito hooks declarados,
-  oito correspondências, incluindo `Subtask_PauseMenu`. Nenhum fonte gerado
-  foi editado ou versionado.
-- `assembleRelease` e `lintRelease`, com `-PminishAlbumTest=false`: passaram.
-  APK público `io.github.genissonemilio.minishcap`, versão 0.3.1/código 5,
-  somente ARM64, sem depuração e com apenas a permissão VIBRATE.
-- Assinatura APK v2 válida, com o mesmo certificado SHA-256 da v0.2.0:
-  `fec15b1bce128aaffb788d09753d804ac4b0ba6ad2cc476e2d77b670410d3e60`.
-- `zipalign -c -P 16 4` e segmentos LOAD das três bibliotecas com alinhamento
-  de 16 KiB: passaram. Callbacks JNI de página, foto e gravação exportados.
-- Auditoria do APK: firmware MIT e licença presentes; sem arquivo ROM,
-  BIOS Nintendo, chave privada ou pacote oculto Zelda 1.
+## Testes de fonte
 
-Não houve nova execução no aparelho nesta máquina. O aceite visual é o
-registrado pelo proprietário na PR; as medições históricas abaixo não são
-medições de desempenho da 0.3.1. A campanha inteira não foi revalidada.
-Relatórios locais permanecem ignorados em `artifacts/review-0.3.1-*`.
+- Navegação Mapa/Álbum/Status nos dois sentidos, captura limpa, paginação, limite de 200 fotos e callbacks obsoletos: passaram.
+- Composição preserva a moldura e o framebuffer original; dissolve depende de frames do jogo. Leitura de fonte rejeita layouts desconhecidos e ROM truncada.
+- Pausa manual observada no jogo usa flag 2, fase 2, telas 0/1 e substage 0. Teste rejeita diálogos ADAM, fades, transições e gameplay.
+- Importação Java: oito casos, incluindo o ZIP real, limites e preservação da ROM anterior em falhas: passaram.
+- Armazenamento Java: persistência, anotações, limites, arquivos inválidos e isolamento do save: passou.
+- Verificação de fontes públicas e licença/hash do firmware aberto: passou.
 
-## Revisão visual 0.3.1 (28 de outubro de 2026)
+## Execução real
 
-O proprietário confirmou que a 0.3.0 funcionou no aparelho e enviou capturas
-comparando o inventário e o álbum. A revisão solicitada é visual: conservar
-a linguagem do jogo e evitar a troca brusca de fundo/moldura.
+- Host Windows: build concluído. BIOS aberta recompilada com serviços LLE; composição de scanlines HLE do core e DMA RAM LLE.
+- Boot, sequência inicial, introdução de novo jogo, conversa inicial do ADAM e controle da Samus percorridos pelo input normal.
+- No frame 25.571: game mode 1, submode 2, Samus jogável. No frame 26.297: pausa manual real, game mode 3, flag 2, fase 2, tela 0.
+- Modo estrito habilitado: zero misses de dispatch, zero instruções interpretadas e zero código curado nos marcos observados.
+- Inicialização visual conferida no mGBA 0.10.5 externo com mesma ROM/firmware. A referência roda boot completo; o build Android usa handoff com intro da BIOS pulada. Não se declara comparação byte a byte ou lockstep da campanha.
+- O contador de acessos não mapeados aumentou durante a introdução; não foi tratado como prova de corrupção. Investigação de equivalência desses acessos e comparação exata de timing ainda são pendentes.
 
-- O álbum passa a compor sobre o frame original do inventário: conserva
-  fundo amarelo, frisos, moldura entalhada, abas L/R e indicadores A/B.
-- Fonte latina lida da ROM USA em memória; nenhum bitmap extraído ou frame
-  enviado pelo proprietário foi adicionado ao Git. Espaços para fotos,
-  cursor branco/laranja e descrição usam a apresentação do inventário.
-- Transição de oito quadros, sem atrasar a navegação original. Testes
-  comparam byte a byte todos os pixels fora das regiões de conteúdo,
-  inclusive com alterações no fundo durante a transição. Redesenhos do
-  mesmo quadro não avançam a animação; sair do inventário descarta a camada.
-- Os testes anteriores de navegação, captura limpa, persistência, paginação
-  e rejeição de callbacks antigos continuam aplicáveis. Os novos testes
-  também verificam a leitura restrita da fonte e a rejeição de ROM truncada.
-- A prévia local foi renderizada com a fonte da ROM sobre a captura enviada
-  pelo proprietário; é uma composição de referência, não um teste da 0.3.1
-  executando no aparelho.
-- O APK de revisão usou o pacote `.albumtest`, versão 0.3.1/código 5, para
-  atualizar a instalação de teste anterior. A confirmação visual posterior
-  do proprietário foi registrada na PR; o APK público usa o pacote normal,
-  conforme a validação de entrega acima.
+## Android e entrega
 
----
+- assembleRelease ARM64 e lintRelease: passaram (0 erros, 72 avisos de lint).
+- Pacote independente de testes: io.github.genissonemilio.metroidfusion.albumtest, versão 0.1.0-dev/código 1.
+- Auditoria: sem ROM, assets extraídos, BIOS Nintendo, saves ou chaves no APK; firmware aberto com licença incluída.
+- zipalign com páginas de 16 KiB e verificação de assinatura: passaram.
+- Chave usada no APK de testes: debug local. Antes de uma release pública, escolher e preservar uma chave estável.
+- Android API 28 x86_64: instalação, launcher, pausa manual, Álbum, câmera, captura, miniatura, visualização e volta ao gameplay passaram por toques no aplicativo real. Mapa -> Álbum -> Status -> Álbum -> Mapa funcionou nos dois sentidos.
+- A sessão Android começou de um estado local real da partida no frame 25.571, produzido pelo host; isso não substitui a validação de uma campanha iniciada no Android. O Android usa scanlines LLE. Modo estrito confirmado no log, sem misses de dispatch, interpretação ou código curado até o frame 34.553 observado.
+- Duas fotos de 240x160 foram gravadas, com metadados de área 0, sala 0 e posição 1600/715. O PNG foi inspecionado sem o álbum ou controles sobrepostos. O SHA-256 do SRAM permaneceu 8dcf14da2f562e04c8840adc743a382181a06b117362b2d2d68ebb9c1bba6e43 antes/depois da segunda captura.
+- Background salvou o estado no frame 32.268; encerramento do processo e reabertura retomaram a partida. As duas fotos continuaram no álbum. A consulta TCP inicial após o relançamento chegou antes da inicialização do servidor; uma conexão nova confirmou a retomada, sem crash.
+- A primeira compilação rápida de QA x86_64 com -O0 estourou a pilha em um ciclo de saltos recompilados. A opção de QA foi corrigida para -O1 com otimização de chamadas finais e o fluxo completo foi repetido com sucesso. A entrega ARM64 usa a otimização normal -O2; a opção de QA é restrita a x86_64 e fica desligada por padrão.
+- APK entregue: MetroidFusion-0.1.0-dev-album-test-arm64.apk, SHA-256 0e7699f77407d8e7fc7cdbea3bbb4dee9ecf6a921214582b94298e2144bf7c7a.
 
-## Atualização 0.3.0 — álbum e câmera no menu (28 de outubro de 2026)
+## Pendências de aceitação
 
-Esta atualização teve validação de fontes, renderer e compilação. O
-proprietário posteriormente confirmou seu funcionamento no aparelho;
-as medições históricas abaixo não são medições de desempenho da 0.3.0.
-
-- ROM fornecida localmente: 16 MiB, SHA-1 USA esperado. Corpus regenerado,
-  com oito hooks declarados e oito correspondências, incluindo o novo
-  `Subtask_PauseMenu`. Nenhum fonte gerado foi editado ou versionado.
-- Teste C++ da página: entrada por Itens/R e Status/L, troca para o menu
-  nativo, exclusividade de input, câmera sem cena, captura idêntica ao buffer
-  recebido, coalescência durante gravação, paginação e descarte de callbacks
-  antigos após troca de tela/reset.
-- Renderer SDL por software: a página chega aos pixels apresentados, o
-  framebuffer de entrada permanece intacto e fechar a página remove a imagem
-  anterior. O teste original de Scale2x/cores/escalas também passa.
-- Persistência, anotações e limite de 200 fotos: passaram. Oito verificações
-  do importador, incluindo a ROM local: passaram.
-- `assembleDebug`, `assembleRelease -PminishAlbumTest=true` e `lintRelease`:
-  passaram no Windows, com JDK 17, SDK 35 e NDK 28.2.13676358.
-- Pacote de teste conferido: `io.github.genissonemilio.minishcap.albumtest`,
-  rótulo **Minish Cap - Album teste**, versão 0.3.0/código 4, somente ARM64.
-  A instalação e seu armazenamento são separados do aplicativo normal.
-- Auditoria de conteúdo, assinatura APK v2 e `zipalign -c -P 16 4`: passaram.
-  Segmentos LOAD de `libmain.so`: alinhamento `0x4000`. Os três callbacks JNI
-  de página/foto/gravação estão exportados. APK sem ROM e sem chaves privadas.
-- Checks de fontes executados com sucesso no GitHub, na branch da PR.
-
-Roteiro de validação no aparelho: importar a ROM no app de teste; em uma
-partida com inventário liberado, abrir START, Itens, R; usar A para abrir a
-câmera e novamente A para fotografar. B retorna ao álbum; direcional e A
-abrem a foto; L/R percorre as abas; START retorna à partida. Fechar/reabrir o
-app deve conservar a foto. Anotar/exportar continua na galeria Android.
-
-O emulador local reconheceu WHPX, mas foi encerrado para liberar memória
-durante a compilação. Nenhuma partida da 0.3.0 foi validada nele. Naquele
-momento, a PR aguardava a validação do proprietário; o aceite posterior e
-a entrega pública estão registrados acima.
-
----
-
-Data de execução: 23 de outubro de 2026.
-
-## Fontes e importação
-
-- ROM USA de 16 MiB conferida por SHA-1 antes da geração.
-- Firmware MIT de 16 KiB conferido por SHA-1; nenhum dump Nintendo usado.
-- Oito verificações locais do importador passaram, incluindo importação da
-  ROM original e rejeição transacional de entradas inválidas/ZIPs limitados.
-- Repetir a geração sem alterações produziu **zero arquivos modificados**,
-  preservando o cache de compilação.
-- Corpus ROM e firmware gerados separadamente; o overlay de retomadas de
-  `symbols/minishcap_reviewed.toml` está incluído.
-
-## Aparelho
-
-POCO M8 Pro 5G, Snapdragon 7s Gen 4 / Adreno 810, Android 16, 8 GiB de RAM.
-
-| Verificação | Resultado |
-|---|---|
-| Importação pelo seletor de arquivos Android | ZIP do proprietário importado; ROM privada com 16.777.216 bytes |
-| Inicialização com firmware aberto | Logos, título e seleção/criação de arquivo funcionaram |
-| Inicialização em modo estritamente estático | 59,37 quadros de guest/s em 20,06 s; zero misses/instruções interpretadas |
-| Partida inicial e retomada em modo estritamente estático | 59,41 quadros de guest/s em 30,10 s; zero misses/instruções interpretadas |
-| Controles | A/B, L/R e quatro direções conferidos pelo anel KEYINPUT; diagonal + A simultâneos; nenhum botão preso após soltar |
-| Entrada Android real | START/A navegando menus e nome, diálogos e deslocamento de Link pelo direcional |
-| Pausa e configurações | Botão MENU abriu a interface; seleção das abas por touch |
-| Estados rápidos | Slot 1 salvo e carregado pelos botões da interface; frame restaurado para 42.996 |
-| Atualização assinada | Instalações de debug/release sobre o mesmo pacote preservaram ROM e save de 8 KiB |
-| Release no aparelho | Pacote não depurável iniciou o jogo; botão de retorno à biblioteca funcionou |
-| Exportação do save | Seletor Android gravou `Downloads/MinishCap.sav`; 8.192 bytes idênticos ao save privado |
-
-O contador mede **quadros do jogo por tempo monotônico**, não a atualização do
-painel. Os testes automáticos foram silenciados. A campanha inteira, a
-qualidade subjetiva do áudio nos alto-falantes e controles físicos não foram
-validados. Os resultados de cobertura valem para os trechos executados e não
-constituem prova de cobertura estática de todo o jogo.
-
-## Correções e pacote
-
-Foram corrigidas as entradas de retorno IRQ e a tabela de modos CpuSet da
-BIOS aberta. O orçamento padrão de 4.096 funções era insuficiente após a
-grande árvore obrigatória de símbolos; elevar para 100.000 concluiu a
-descoberta dos callbacks/continuações na RAM, incluindo `0x0300643C` e
-`0x030065A8`. O corpus foi regenerado, sem editar C++ derivado da ROM.
-
-O SDL fixado é copiado durante o build e recebe um patch limitado aos flags
-de registro de receivers em Android 13+. Os submódulos permanecem intactos.
-O lint mantém exceções restritas a caminhos opcionais do SDL (BLE/captura de
-áudio e a sobrecarga legada de receiver), sem desativar esses checks no app.
-
-- `assembleDebug`, `assembleRelease` e `lintRelease`: passaram.
-- Assinatura APK v2 verificada; chave estável preservada fora da pasta de build.
-- Bibliotecas ARM64 com segmentos ELF alinhados a pelo menos 16 KiB.
-- `zipalign -c -P 16 4`: passou.
-- Auditoria do APK: firmware MIT e licença presentes; sem ROM, BIOS Nintendo
-  ou chaves de assinatura no conteúdo.
-- O manifest de release solicita somente VIBRATE, sem INTERNET ou acesso
-  geral ao armazenamento. O observador TCP é exclusivo do modo QA de debug.
-- Workflow de validação de fontes no GitHub executado com sucesso.
-
-Relatórios detalhados, capturas e dados privados de teste ficam ignorados em
-`artifacts/` na máquina de desenvolvimento; não são enviados ao repositório.
-
-## Atualização 0.1.1 — apresentação dos pixels
-
-No mesmo POCO, em 23 de outubro de 2026, com áudio de teste silenciado e
-execução estritamente estática:
-
-| Verificação | Resultado |
-|---|---|
-| Pixel perfeito, cena interna carregada por estado | 59,56 quadros de guest/s em 20,06 s |
-| Suave (Scale2x), mesma cena/estado | 59,19 quadros de guest/s em 20,07 s |
-| Cobertura nos dois testes | Zero misses e zero instruções interpretadas |
-| Geometria real | 1920×1280 centralizados na tela 2772×1280, proporção 3:2 |
-| Captura Pixel perfeito | Nenhum bloco 8×8 desigual na região central de teste |
-| Captura Suave | Nenhum subpixel 4×4 desigual; 654 blocos originais receberam contornos novos na região analisada |
-| Troca ao vivo | MENU → Graphics → Estilo dos pixels alterou o visual e persistiu `pixel_mode` nas preferências Android |
-| Entrada após troca de modo | Nove verificações touch passaram, incluindo diagonal + A e liberação dos ponteiros |
-| APK final de release | Atualização instalada; modo Suave retomado, texto do menu sem corte e retorno à tela inicial funcionaram |
-| Dados existentes | ROM importada preservada e save de 8 KiB idêntico antes/depois dos testes |
-
-São amostras curtas de desempenho, sem medir consumo ou estabilidade térmica
-em sessões longas. A suavização é apresentação Scale2x, não novos assets HD.
-O raster original do GBA e seus hashes não passam pelo filtro.
-
-O teste de imagem sem ROM passou para os 512 padrões de vizinhança,
-bordas de imagens estreitas, preservação das cores RGB e do buffer de entrada,
-escala inteira em múltiplas resoluções e comparação pixel a pixel da saída
-SDL por software ao alternar os dois estilos. O workflow executa esse teste.
-Os builds debug/release e `lintRelease` passaram.
-
-O validador de controles agora usa o contador monotônico do anel de entrada:
-carregar um estado pode voltar o número do frame sem apagar os eventos
-anteriores. Isso evita atribuir uma amostra antiga ao toque recém-injetado.
-
-O retorno à biblioteca também passou a fechar o menu por sua ação de toggle:
-o comando Voltar pode apenas sair de uma seção selecionada, mantendo a pausa
-aberta e impedindo o consumo do evento de saída. O fluxo foi repetido no APK
-final sem depuração. A assinatura estável e o alinhamento APK de 16 KiB foram
-verificados; a auditoria não encontrou ROM ou chaves no pacote.
-
-## Atualização 0.2.0 — controles e álbum
-
-Validação em 24 de outubro de 2026, no mesmo POCO, com QA silenciado:
-
-- Controles redesenhados com vetores originais, conservando os alvos A/B,
-  direcional, L/R e START. Nove verificações de entrada passaram, incluindo
-  diagonal + A e soltura sem botão preso.
-- 59,45 quadros de guest/s em 20,07 segundos, com os novos controles e uma
-  captura durante a medição; execução estritamente estática, zero misses e
-  zero instruções interpretadas no trecho.
-- Câmera física por ADB gerou PNG 480×320 no modo Suave, sem botões do port
-  por cima. Título e nota foram salvos pela interface e sobreviveram à
-  atualização assinada e à reabertura do aplicativo.
-- Exportação pelo seletor Android produziu 30.982 bytes idênticos à captura
-  privada (SHA-256 `1787148feb8e2780dd6f910648554573cb5c7a8a40eeb93b76e4b1ad05b6c1f6`).
-- Miniaturas, ampliação por dois toques e retorno ao inventário foram
-  conferidos em capturas do aparelho. Durante a galeria, o frame de guest
-  permaneceu em 42.529 nas duas consultas separadas por um segundo.
-
-A aba no menu original é uma extensão visual; sua condição foi conferida
-contra o estado real do jogo: `gMain` em tarefa 2/estado 2/subestado 7,
-`gUI` em fase 2/subtask 1 e `gPauseMenuOptions` em fase 2/página 1.
-A cena inicial usada em QA ainda bloqueia o inventário por não ter itens.
-Para testar a interface original sem avançar a história do proprietário,
-o cenário de teste habilitou temporariamente `gSave.inventory[0]` pela
-ferramenta de debug e acionou START normalmente. Essa alteração existe só
-no cenário de teste; o produto lê o estado, não escreve a flag. Save e
-retomada originais são restaurados após esse teste.
-
-Os testes sem ROM verificam a captura antes das camadas de interface, a
-coalescência de solicitações, as condições do menu, a persistência de notas
-Unicode, os limites de imagem/200 entradas, a rejeição de IDs inválidos e
-a separação do arquivo de save. O armazenamento publica o PNG apenas depois
-da escrita dos metadados, e falhas não deixam uma entrada parcial visível.
-As mesmas verificações fazem parte do workflow de fontes.
-
-O fluxo final foi repetido com a aba na área segura do antigo SELECT,
-sem sobrepor START. Os acessos pelo inventário, pelo menu do runtime e
-pela tela inicial abriram a mesma galeria. A ação de captura no menu
-retornou à partida e publicou um novo PNG. A exclusão exigiu confirmação,
-atualizou a lista e chegou ao estado vazio; apenas as três imagens criadas
-pelo QA foram removidas. O save e a retomada do proprietário foram
-restaurados e conferidos byte a byte, encerrando o cenário modificado de QA.
+Campanha completa, áudio normal e desempenho em ARM64 físico, controle Bluetooth/USB, suspensão/retomada sob pressão de memória e importação/exportação pelo seletor real Android exigem QA do dono. Outras regiões e ROMs modificadas não são suportadas.

@@ -4,11 +4,11 @@
 #include <cstdio>
 #include <string_view>
 
-namespace minish {
+namespace fusion {
 namespace {
 using Color = std::array<std::uint8_t, 3>;
-constexpr Color ink{48,48,56}, paper{216,212,212}, edge{144,152,160},
-    white{255,255,255}, blue{24,48,176}, orange{255,104,0}, dark{16,16,24};
+constexpr Color ink{176,232,248}, paper{16,24,56}, edge{56,144,200},
+    white{255,255,255}, blue{24,40,96}, orange{248,224,64}, dark{8,16,40};
 
 // Small original 5x7 bitmap alphabet. UI text does not depend on Android fonts.
 constexpr std::string_view alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:/-<>!?";
@@ -53,10 +53,10 @@ struct Canvas {
         if(ch=='.' || ch==':') return 3;
         if(ch=='/' || ch=='-') return 7;
         if(!native_letter(ch)) return 6;
-        int right=0,left=8;
-        for(int py=0;py<16;++py) for(int px=0;px<8;++px)
-            if(font[(ch*16+py)*8+px]) { left=std::min(left,px);right=std::max(right,px); }
-        return left==8?4:right-left+2;
+        int right=0,left=16;
+        for(int py=0;py<16;++py) for(int px=0;px<16;++px)
+            if(font[(ch*16+py)*16+px]) { left=std::min(left,px);right=std::max(right,px); }
+        return left==16?4:right-left+2;
     }
     int text_width(std::string_view s) const {
         int result=0;for(unsigned char ch:s) result+=advance(ch);return result;
@@ -72,11 +72,12 @@ struct Canvas {
                 for(int py=3;py<14;++py) pixel(x+5-(py-3)/2,y+py,c);
             } else if(ch=='-') rect(x,y+9,6,1,c);
             else if(native_letter(ch)) {
-                int left=8;
-                for(int row=0;row<16;++row) for(int col=0;col<8;++col)
-                    if(font[(ch*16+row)*8+col]) left=std::min(left,col);
-                for(int row=0;row<16;++row) for(int col=0;col<8;++col)
-                    if(font[(ch*16+row)*8+col]) pixel(x+col-left,y+row,c);
+                int left=16;
+                for(int row=0;row<16;++row) for(int col=0;col<16;++col)
+                    if(font[(ch*16+row)*16+col]) left=std::min(left,col);
+                for(int row=0;row<16;++row) for(int col=0;col<16;++col)
+                    if(const auto value=font[(ch*16+row)*16+col])
+                        pixel(x+col-left,y+row,value==1?c:blue);
             } else {
                 if(ch>='a' && ch<='z') ch-=32;
                 const auto i=alphabet.find(static_cast<char>(ch));
@@ -116,25 +117,16 @@ struct Canvas {
 
 Color native_paper(const std::uint8_t* frame) {
     if(!frame) return paper;
-    std::array<unsigned,4096> counts{};
-    std::array<Color,4096> colors{};
-    for(int y=26;y<136;++y) for(int x=34;x<214;++x) {
+    std::array<unsigned,4096> count{};
+    std::array<Color,4096> value{};
+    for(int y=8;y<152;++y) for(int x=8;x<232;++x) {
         const auto* p=frame+(y*240+x)*3;
-        if(p[0]<180 || p[1]<180 || p[2]<180 || p[0]>240 ||
-                std::abs(int(p[0])-p[1])>24 || std::abs(int(p[1])-p[2])>24) continue;
-        const int key=((p[0]>>4)<<8)|((p[1]>>4)<<4)|(p[2]>>4);
-        ++counts[key];
-        if(p[0]+p[1]+p[2]>colors[key][0]+colors[key][1]+colors[key][2]) colors[key]={p[0],p[1],p[2]};
+        if(p[0]+p[1]+p[2]>210 || p[2]<p[0]) continue;
+        const unsigned key=((p[0]>>4)<<8)|((p[1]>>4)<<4)|(p[2]>>4);
+        ++count[key];value[key]={p[0],p[1],p[2]};
     }
-    const auto peak=*std::max_element(counts.begin(),counts.end());
-    if(!peak) return paper;
-    Color chosen{};
-    // Empty item slots can be the largest gray patch. Prefer the lighter
-    // common stone tone while rejecting tiny white highlights in the frame.
-    for(std::size_t i=0;i<counts.size();++i)
-        if(counts[i]>=std::max(1u,peak/3) && colors[i][0]+colors[i][1]+colors[i][2]>
-                chosen[0]+chosen[1]+chosen[2]) chosen=colors[i];
-    return chosen;
+    const auto index=std::max_element(count.begin(),count.end())-count.begin();
+    return count[index]?value[index]:paper;
 }
 }
 
@@ -179,9 +171,9 @@ bool PhotoMenu::update(unsigned keys,unsigned screen,unsigned next,bool stable) 
         view_=View::Closed;++token_;++photo_token_;return false;
     }
     if(!active()) {
-        // Insert exactly one page between Items (1) and Quest Status (2).
-        // Both directions are read from the actual native navigation table.
-        if((screen==1 && next==2 && keys==R) || (screen==2 && next==1 && keys==L)) {
+        // Insert the album between Fusion Map (0) and Status (1).
+        // Native Map L still opens Sleep; native Status R is unchanged.
+        if((screen==0 && next==1 && keys==R) || (screen==1 && next==0 && keys==L)) {
             open(screen,keys==R);return true;
         }
         return false;
@@ -241,99 +233,86 @@ void PhotoMenu::capture_finished(std::uint64_t token,bool success) {
     if(success && active()) { page_=0;selected_=0;reload(); }
 }
 bool PhotoMenu::load_native_font(const std::uint8_t* rom,std::size_t size) {
-    // USA font-page metadata: tmc data/const/text.s, gUnk_08109248.
-    // The first page contains 8x16 packed-nibble glyphs, 64 bytes each.
-    constexpr std::size_t table=0x109248,base=0x692F60;
-    if(!rom || size!=0x1000000 || rom[table]!=0x60 || rom[table+1]!=0x2F ||
-            rom[table+2]!=0x69 || rom[table+3]!=0x08) return false;
-    std::array<std::uint8_t,128*8*16> decoded{};
+    native_font_=false; font_.fill(0);
+    // Fusion USA: database.json text_characters.gfx + TextDrawCharacter's
+    // PC-relative source literal (0x080791D8). Tiles are in 32-glyph rows;
+    // the bottom half is 0x400 bytes after each glyph's top tile.
+    constexpr std::size_t base=0x682FAC,widths=0x576234,literal=0x791D8;
+    if(!rom || size!=0x800000 || rom[literal]!=0xAC || rom[literal+1]!=0x2F ||
+            rom[literal+2]!=0x68 || rom[literal+3]!=0x08) return false;
     unsigned marks=0;
-    for(unsigned ch=0;ch<128;++ch) for(unsigned y=0;y<16;++y) for(unsigned x=0;x<8;++x) {
-        const unsigned pixel=(rom[base+ch*64+y*4+x/2]>>((x%2)*4))&15;
-        // Zero is transparent; F is the font's column/spacing sentinel.
-        decoded[(ch*16+y)*8+x]=(pixel!=0 && pixel!=15)?1:0;
-        if(ch=='A') marks+=decoded[(ch*16+y)*8+x];
+    for(unsigned ch=32;ch<127;++ch) {
+        const unsigned id=ch>='a' && ch<='z'?ch+0x60:
+            ch>='A' && ch<='Z'?ch+0x40:ch+0x20;
+        const unsigned glyph_width=std::min(16u,unsigned(rom[widths+id]));
+        for(unsigned y=0;y<16;++y) for(unsigned x=0;x<glyph_width;++x) {
+            const unsigned offset=base+id*32+(y/8)*0x400+(x/8)*32+(y%8)*4+(x%8)/2;
+            const unsigned pixel=(rom[offset]>>((x%2)*4))&15;
+            // 2 is the letter; 3 is its separate one-pixel outline. Flattening
+            // them into the same color makes Fusion's thin font look bold.
+            font_[(ch*16+y)*16+x]=pixel==2?1:pixel==3?2:0;
+            if(ch=='A' && pixel==2) ++marks;
+        }
     }
-    if(!marks) return false;
-    font_=decoded;native_font_=true;return true;
+    native_font_=marks>0;return native_font_;
 }
 bool PhotoMenu::render(std::vector<std::uint8_t>& rgb,const std::uint8_t* native) const {
     if(!active()) return false;
     if(native) rgb.assign(native,native+width*height*3);
-    else rgb.assign(width*height*3,216); // source-only preview, never runtime chrome
+    else rgb.assign(width*height*3,16); // source-only preview, never runtime chrome
     Canvas c{rgb,native_font_?font_.data():nullptr};
     if(view_==View::Camera) {
         c.rect(0,0,240,160,ink);c.image(scene_,scene_w_,scene_h_,0,0,240,160);
         c.rect(0,0,240,18,dark);c.frame(1,1,238,16,white);
-        c.text(8,1,"Camera de Hyrule",white);
+        c.text(8,1,"CAMERA BSL",white);
         // Viewfinder corners stay outside the saved clean scene.
         for(int x:{12,216}) for(int y:{23,125}) {
             c.rect(x,y,12,1,white);c.rect(x,y,1,12,white);
         }
         c.rect(15,140,210,18,dark);c.frame(15,140,210,18,white);
-        c.text(21,141,message_.empty()?"A: Fotografar   B: Album":message_,white,198);
-        if(scene_.empty()) c.text(28,72,"Volte ao jogo para fotografar.",white,190);
+        c.text(21,141,message_.empty()?"A FOTO   B ALBUM":message_,white,198);
+        if(scene_.empty()) c.text(28,72,"VOLTE AO JOGO PARA FOTOGRAFAR",white,190);
         return true;
     }
     if(view_==View::Photo) {
         c.rect(0,0,240,160,ink);c.image(photo_,240,160,0,0,240,160);
         c.rect(15,140,210,18,dark);c.frame(15,140,210,18,white);
-        c.text(21,141,"B: Voltar ao album",white,198);
-        if(photo_loading_ || photo_.empty()) c.text(40,72,photo_loading_?"Abrindo lembranca...":"Foto indisponivel",white,180);
+        c.text(21,141,"B VOLTAR AO ALBUM",white,198);
+        if(photo_loading_ || photo_.empty()) c.text(40,72,photo_loading_?"ABRINDO FOTO...":"FOTO INDISPONIVEL",white,180);
         return true;
     }
-    // Keep the live yellow backdrop, carved border, L/R tabs and A/B badges.
-    // Only the original title field and inner content are owned by this page.
-    const auto stone=native_paper(native);
-    c.rect(34,35,180,101,stone);
-    if(native) for(int y=35;y<136;++y) for(int x=34;x<214;++x) {
-        const auto* p=native+((119+(y-26)%8)*240+34+(x-34)%8)*3;
-        if(std::abs(int(p[0])-stone[0])<12 && std::abs(int(p[1])-stone[1])<12 &&
-                std::abs(int(p[2])-stone[2])<12) c.pixel(x,y,{p[0],p[1],p[2]});
-    }
-    Color cyan{80,208,240};
-    if(native) std::copy_n(native+(9*240+9)*3,3,cyan.begin());
-    c.rect(4,4,103,17,cyan);
-    const int title_x=(102-c.text_width("ALBUM"))/2;
-    const auto title=[&](int dx,int dy,Color color) {
-        int x=title_x;
-        for(const char ch:std::string_view("ALBUM")) {
-            c.text(x+dx,2+dy,std::string_view(&ch,1),color);
-            x+=c.advance(static_cast<unsigned char>(ch))+2;
-        }
-    };
-    for(int dx=-1;dx<=1;++dx) for(int dy=-1;dy<=1;++dy)
-        title(dx,dy,blue);
-    title(0,0,white);
-
-    c.camera(43,37);c.text(64,34,"Camera",ink,38);
-    if(selected_==0) c.cursor(40,34,21,19);
+    // The outer eight pixels remain the live Fusion menu raster. The inner
+    // panel uses its actual dark background tone, with Fusion cyan/yellow trim.
+    const auto background=native_paper(native);
+    c.rect(8,8,224,144,background);
+    c.frame(8,8,224,144,edge);c.frame(10,10,220,140,blue);
+    c.rect(12,12,216,21,blue);c.rect(12,32,216,1,edge);
+    c.text(18,13,"MAP",edge);c.text(166,13,"STATUS",edge);
+    c.rect(61,13,90,18,{32,72,112});c.text(79,13,"ALBUM",white,70);
+    c.text(18,34,"CAMERA",selected_==0?orange:ink,82);
+    if(selected_==0) c.frame(14,35,87,17,orange);
     char count[24];std::snprintf(count,sizeof(count),"%03d/200",total_);
-    c.text(210-c.text_width(count),34,count,ink);
-    Color slot=stone,highlight=stone;
-    for(auto& v:slot) v=static_cast<std::uint8_t>(std::max(0,int(v)-18));
-    for(auto& v:highlight) v=static_cast<std::uint8_t>(std::min(255,int(v)+24));
+    c.text(224-c.text_width(count),34,count,ink);
     for(int i=0;i<page_size;++i) {
-        const int x=39+(i%3)*58,y=55+(i/3)*37;
-        c.rect(x+2,y,49,33,edge);c.rect(x,y+2,53,29,edge);
-        c.rect(x+2,y+1,49,31,slot);c.rect(x+1,y+2,51,29,slot);
-        c.rect(x+2,y+32,49,1,highlight);c.rect(x+52,y+3,1,28,highlight);
-        if(i<static_cast<int>(entries_.size())) c.image(entries_[i].thumbnail,60,36,x+2,y+2,49,29);
-        if(selected_==i+1) c.cursor(x-1,y-1,55,35);
+        const int x=16+(i%3)*70,y=55+(i/3)*39;
+        c.rect(x,y,66,35,dark);c.frame(x,y,66,35,edge);
+        c.rect(x+2,y+2,62,1,blue);
+        if(i<static_cast<int>(entries_.size())) c.image(entries_[i].thumbnail,60,36,x+3,y+3,60,29);
+        else { char number[8];std::snprintf(number,sizeof(number),"%02d",page_*6+i+1);
+            c.text(x+(66-c.text_width(number))/2,y+9,number,edge); }
+        if(selected_==i+1) { c.frame(x-1,y-1,68,37,orange);c.frame(x,y,66,35,white); }
     }
-    c.rect(15,140,210,18,dark);c.frame(15,140,210,18,white);
-    char page_label[40];std::snprintf(page_label,sizeof(page_label),"A: Camera    %d/%d",page_+1,std::max(1,(total_+5)/6));
+    c.rect(12,132,216,16,blue);
+    char page_label[48];std::snprintf(page_label,sizeof(page_label),"A FOTO   L/R ABAS   %d/%d",page_+1,std::max(1,(total_+5)/6));
     std::string label=selected_>0 && selected_<=static_cast<int>(entries_.size())?
         entries_[selected_-1].title:page_label;
-    if(loading_) label="Abrindo lembrancas...";
-    c.text(21,141,message_.empty()?label:message_,white,198);
+    if(loading_) label="ABRINDO ALBUM...";
+    c.text(17,131,message_.empty()?label:message_,white,207);
     return true;
 }
 
 bool PhotoMenuPresentation::album_content_pixel(int x,int y) {
-    return (x>=4 && x<107 && y>=3 && y<21) ||
-           (x>=34 && x<214 && y>=34 && y<136) ||
-           (x>=15 && x<225 && y>=140 && y<158);
+    return x>=8 && x<232 && y>=8 && y<152;
 }
 void PhotoMenuPresentation::reset() {
     view_=PhotoMenu::View::Closed;transition_=full_frame_=false;
@@ -365,4 +344,4 @@ bool PhotoMenuPresentation::compose(const PhotoMenu& menu,const std::uint8_t* na
     previous_=out;
     return menu.active() || transition_ || next!=PhotoMenu::View::Closed;
 }
-} // namespace minish
+} // namespace fusion

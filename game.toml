@@ -1,92 +1,21 @@
-# game.toml — The Legend of Zelda: The Minish Cap (GBA)
-#
-# The runner reads this to decide which ROM to load, which region
-# config to layer in, where the entry point is, and what save chip
-# is expected. All fields are also reachable from the TCP debug
-# server so probes can sanity-check the loaded build.
-
 [game]
-name           = "The Legend of Zelda: The Minish Cap"
-short_name     = "minish_cap"
-# Default region; override at configure time. Each region's full
-# config lives in config/<region>.toml and is layered on top of this.
+name = "Metroid Fusion"
+short_name = "metroid_fusion"
 default_region = "usa"
-
-# ── BIOS identity ────────────────────────────────────────────────────
-#
-# The GBA BIOS is real, executed code. The runner refuses to launch
-# without a hash-verified BIOS. See ../gbarecomp/PRINCIPLES.md
-# "BIOS is sacred" and ../gbarecomp/bios/README.md.
 [bios]
-path = "../gbarecomp/bios/gba_bios.bin"   # default; override via --bios
-sha1 = "300c20df6731a33952ded8c436f7f186d25d3492"
-
-# ── ROM identity ─────────────────────────────────────────────────────
-#
-# rom = absolute or relative path to the user's ROM image.
-# sha1 = expected SHA-1; if it doesn't match the runner refuses to
-#        launch (see CLAUDE.md "ROM hash gates everything").
+path = "android/firmware/open_gba_bios.firmware"
+sha1 = "2e41f9d30ecdf1c4540edf89ac16f49bf327edb7"
 [rom]
-path = "roms/minishcap_usa.gba"   # user-provided; not in this repo
-# sha1 is filled in per region in config/<region>.toml.
-
-# ── Recompiler entry & layout ───────────────────────────────────────
-#
-# Filled in once we've verified per-region values via gba_scan and
-# manual cross-check against the disassembly. Don't guess these.
-[recompiler]
-entry_point   = "0x08000000"   # cartridge ROM base; real entry is set
-                                # by the ROM header crt0 jump, which
-                                # gba_scan extracts.
-seeds         = "symbols/imported_symbols.tsv"
-boundaries    = "symbols/function_boundaries.tsv"
-out_dir       = "generated"
-strict        = true
-
-# ── Save chip ────────────────────────────────────────────────────────
-#
-# Minish Cap uses EEPROM. The exact size (4K vs 64K) is per-region;
-# the per-region config sets it.
+path = "roms/fusion_usa.gba"
+sha1 = "ca33f4348c2c05dd330d37b97e2c5a69531dfe87"
 [save]
-type = "eeprom"            # one of: sram | flash512 | flash1m | eeprom
-
-# ── Runtime ─────────────────────────────────────────────────────────
-[runtime]
-debug_port    = 19842
-window_title  = "MinishCapRecomp"
-
-# ── Video ───────────────────────────────────────────────────────────
-# Present-time screen-color simulation (faithful display reproduction;
-# does NOT touch emulation or the verify path — raw BGR555 stays the
-# oracle). One of: raw | unlit | frontlit | backlit | classic.
-#   raw      = no simulation (5→8 bit replication; the default if unset)
-#   frontlit = original reflective panel, lit — the authored "as designed" look
-#   backlit  = late near-sRGB panel (clean blacks)
-#   classic  = community-canonical gamma-4.0 model
-# Overridable at launch with the GBARECOMP_SCREEN env var.
+type = "sram"
+size = "0x8000"
+path = "saves/fusion.sav"
 [video]
-screen = "frontlit"
-# Adaptive widescreen is a disabled-by-default feature in the Mods catalog.
-# Its state is persisted in mods/state.toml rather than this display section.
-
-# ── Audio ───────────────────────────────────────────────────────────
-# MP2K (m4a) verified-enhancement shadow mixer: re-renders the driver's
-# voices in float (free of the hardware's 8-bit/low-rate mix), policed
-# every sample against the canon hardware stream and reverting loudly on
-# divergence — QoL on top of correctness, never the verify oracle. Off
-# by default; overridable at launch with GBARECOMP_AUDIO_SHADOW ("0" off).
+screen = "backlit"
 [audio]
-shadow = true
-
-# ── Function table (dispatch hints) ─────────────────────────────────
-#
-# Discovered function addresses go here, grouped by ARM/THUMB mode.
-# We split because BX/BLX targets carry the mode bit and codegen needs
-# to know which entry signature to emit.
-#
-# Discovery is mechanical: tools/import_tmc_symbols extracts these
-# from the decomp's symbol output, and gba_recompile expands them
-# during code generation.
-[functions]
-arm   = []
-thumb = []
+shadow = false
+[runtime]
+window_title = "Metroid Fusion"
+debug_port = 19844

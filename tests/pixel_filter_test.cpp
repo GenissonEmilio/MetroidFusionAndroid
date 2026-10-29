@@ -3,7 +3,7 @@
 #include <array>
 #include <iostream>
 #include <stdexcept>
-#if defined(MINISH_TEST_SDL)
+#if defined(FUSION_TEST_SDL)
 #include "pixel_presenter.h"
 #endif
 
@@ -24,7 +24,7 @@ void check_filter() {
         }
         const auto before=input;
         std::vector<std::uint8_t> result;
-        minish::scale2x_rgb24(input.data(),3,3,result);
+        fusion::scale2x_rgb24(input.data(),3,3,result);
         check(result.size()==108,"Wrong Scale2x size");
         check(input==before,"Filter modified the guest framebuffer");
         const auto at=[&](int x,int y) {
@@ -48,7 +48,7 @@ void check_filter() {
         for (std::size_t i=0;i<input.size();i+=3) {
             input[i]=23; input[i+1]=143; input[i+2]=226;
         }
-        minish::scale2x_rgb24(input.data(),dims[0],dims[1],output);
+        fusion::scale2x_rgb24(input.data(),dims[0],dims[1],output);
         check(output.size()==input.size()*4,"Thin or native image size mismatch");
         for (std::size_t i=0;i<output.size();++i)
             check(output[i]==input[i%3],"Solid color/border was changed");
@@ -56,28 +56,28 @@ void check_filter() {
 }
 
 void check_layout() {
-    for (auto mode : {minish::PixelMode::Perfect,minish::PixelMode::Smooth}) {
+    for (auto mode : {fusion::PixelMode::Perfect,fusion::PixelMode::Smooth}) {
         for (int w : {240,640,720,1080,1280,1920,2400,2772})
             for (int h : {160,360,480,720,1080,1280}) {
-                const auto r=minish::pixel_layout(w,h,240,160,mode);
+                const auto r=fusion::pixel_layout(w,h,240,160,mode);
                 check(r.width<=w && r.height<=h && r.x>=0 && r.y>=0,"Layout clips");
                 check(r.width==240*r.integer_scale && r.height==160*r.integer_scale,
                     "Pixels have fractional or unequal scale");
                 check(r.x==(w-r.width)/2 && r.y==(h-r.height)/2,"Layout not centered");
-                if(mode==minish::PixelMode::Smooth && r.integer_scale>=2)
+                if(mode==fusion::PixelMode::Smooth && r.integer_scale>=2)
                     check(r.integer_scale%2==0,"Scale2x subpixels have unequal sizes");
             }
     }
-    const auto poco=minish::pixel_layout(2772,1280,240,160,minish::PixelMode::Smooth);
+    const auto poco=fusion::pixel_layout(2772,1280,240,160,fusion::PixelMode::Smooth);
     check(poco.x==426 && poco.y==0 && poco.width==1920 && poco.height==1280,
         "POCO geometry changed");
-    const auto invalid=minish::pixel_layout(0,0,240,160,minish::PixelMode::Perfect);
+    const auto invalid=fusion::pixel_layout(0,0,240,160,fusion::PixelMode::Perfect);
     check(invalid.width==0 && invalid.height==0,"Invalid layout not empty");
-    const auto tiny=minish::pixel_layout(120,80,240,160,minish::PixelMode::Perfect);
+    const auto tiny=fusion::pixel_layout(120,80,240,160,fusion::PixelMode::Perfect);
     check(tiny.width==120 && tiny.height==80 && tiny.integer_scale==0,"Small screen fit");
 }
 
-#if defined(MINISH_TEST_SDL)
+#if defined(FUSION_TEST_SDL)
 std::vector<std::uint8_t> captured;
 int capture_width=0,capture_height=0;
 void capture_sink(const std::uint8_t* rgb,int w,int h) {
@@ -100,14 +100,14 @@ void check_renderer() {
         std::copy(color.begin(),color.end(),input.begin()+(y*240+x)*3);
     }
     check(SDL_UpdateTexture(original,nullptr,input.data(),240*3)==0,SDL_GetError());
-    minish::scale2x_rgb24(input.data(),240,160,scaled);
-    minish::PixelPresenter presenter;
-    minish::set_capture_sink(capture_sink);
+    fusion::scale2x_rgb24(input.data(),240,160,scaled);
+    fusion::PixelPresenter presenter;
+    fusion::set_capture_sink(capture_sink);
     for (int trial=0;trial<6;++trial) {
         const bool smooth=trial%2;
-        minish::set_pixel_mode(smooth?minish::PixelMode::Smooth:minish::PixelMode::Perfect);
-        check(minish::request_capture(),"Capture request was rejected");
-        check(!minish::request_capture(),"Repeated requests not coalesced");
+        fusion::set_pixel_mode(smooth?fusion::PixelMode::Smooth:fusion::PixelMode::Perfect);
+        check(fusion::request_capture(),"Capture request was rejected");
+        check(!fusion::request_capture(),"Repeated requests not coalesced");
         presenter.present(renderer,original,input.data(),240,160,{0,0,960,640});
         check(capture_width==(smooth?480:240) && capture_height==(smooth?320:160),"Capture dimensions");
         check(captured==(smooth?scaled:input),"Capture is not the clean displayed game image");
@@ -120,15 +120,15 @@ void check_renderer() {
         }
     }
     const auto before=input;
-    minish::set_frame_filter(menu_filter);
-    minish::set_pixel_mode(minish::PixelMode::Perfect);
+    fusion::set_frame_filter(menu_filter);
+    fusion::set_pixel_mode(fusion::PixelMode::Perfect);
     presenter.present(renderer,original,input.data(),240,160,{0,0,960,640});
     std::vector<std::uint8_t> page(960*640*3);
     check(SDL_RenderReadPixels(renderer,nullptr,SDL_PIXELFORMAT_RGB24,page.data(),960*3)==0,SDL_GetError());
     check(std::all_of(page.begin(),page.end(),[](std::uint8_t c) { return c==61; }),
         "In-game page did not reach the actual SDL renderer");
     check(input==before,"In-game page modified the source GBA framebuffer");
-    minish::set_frame_filter(nullptr);
+    fusion::set_frame_filter(nullptr);
     // HostWindow uploads the new guest image before each present.
     check(SDL_UpdateTexture(original,nullptr,input.data(),240*3)==0,SDL_GetError());
     presenter.present(renderer,original,input.data(),240,160,{0,0,960,640});
@@ -136,7 +136,7 @@ void check_renderer() {
     check(page[0]==input[0] && page[1]==input[1] && page[2]==input[2],
         "Closing the page left stale menu pixels on screen");
     presenter.close(); presenter.close();
-    minish::set_capture_sink(nullptr);
+    fusion::set_capture_sink(nullptr);
     SDL_DestroyTexture(original); SDL_DestroyRenderer(renderer); SDL_FreeSurface(surface);
     SDL_Quit();
 }
@@ -144,13 +144,9 @@ void check_renderer() {
 
 int main() {
     check_filter(); check_layout();
-    const minish::MenuSnapshot inventory{2,2,7,2,1,2,1};
-    check(minish::album_in_inventory(inventory),"Inventory context not recognized");
-    for(int field=0;field<7;++field) {
-        auto altered=inventory;auto* bytes=reinterpret_cast<std::uint8_t*>(&altered);
-        bytes[field]=0;check(!minish::album_in_inventory(altered),"Album appears outside inventory");
-    }
-#if defined(MINISH_TEST_SDL)
+    check(fusion::album_in_inventory({3,2,2,0,0}),"Fusion manual pause not recognized");
+    check(!fusion::album_in_inventory({3,1,2,3,2}),"Album appears in ADAM conversation");
+#if defined(FUSION_TEST_SDL)
     check_renderer();
 #endif
     std::cout<<"Pixel filter, borders, palette, layout and rendering checks passed\n";

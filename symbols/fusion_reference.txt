@@ -1,0 +1,3 @@
+https://github.com/biosp4rk/mf-zm-info
+commit 2a0bc87ab1dcc1d61adb9c5f3ac7329ddb42939c
+code.json SHA256 b0be20346d6ee9f14e72f16d041c3aeff963fb72a41fbad3ba33c1037a41f961

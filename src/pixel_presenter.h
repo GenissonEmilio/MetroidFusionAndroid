@@ -2,7 +2,7 @@
 #include "pixel_filter.h"
 #include <SDL.h>
 
-namespace minish {
+namespace fusion {
 PixelMode pixel_mode();
 void set_pixel_mode(PixelMode mode);
 using CaptureSink = void (*)(const std::uint8_t*, int, int);

@@ -1,4 +1,4 @@
-package io.github.genissonemilio.minishcap;
+package io.github.genissonemilio.metroidfusion;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -10,9 +10,9 @@ public class CaptureStoreTest {
     }
     interface Throwing { void run() throws Exception; }
     public static void main(String[] args) throws Exception {
-        Path root=Files.createTempDirectory("minish-album-test");
+        Path root=Files.createTempDirectory("fusion-album-test");
         try {
-            Path save=root.resolve("minishcap.sav");Files.write(save,new byte[]{1,2,3});
+            Path save=root.resolve("fusion.sav");Files.write(save,new byte[]{1,2,3});
             byte[] png=Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jN1sAAAAASUVORK5CYII=");
             CaptureStore store=new CaptureStore(root.toFile());check(store.list().isEmpty());
             rejects(()->store.save(new byte[40],1,1,0,0,0,0));
@@ -23,8 +23,8 @@ public class CaptureStoreTest {
             CaptureStore.Entry read=new CaptureStore(root.toFile()).list().get(0);
             check(read.title.equals("Entrada da floresta") && read.note.contains("Baú") && read.area==21 && read.x==120);
             rejects(()->store.annotate(e.id,"a".repeat(81),""));
-            rejects(()->store.delete("../../minishcap.sav"));
-            rejects(()->store.annotate("../../minishcap.sav","X","X"));
+            rejects(()->store.delete("../../fusion.sav"));
+            rejects(()->store.annotate("../../fusion.sav","X","X"));
             // Incomplete writes and untrusted filenames never become entries.
             Files.write(root.resolve("captures/0000000000000_aaaaaaaa.png"),png);
             Files.write(root.resolve("captures/not-an-id.png"),png);

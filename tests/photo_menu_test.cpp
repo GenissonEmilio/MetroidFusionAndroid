@@ -1,11 +1,12 @@
 #include "photo_menu.h"
+#include "album_context.h"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <iterator>
 
 namespace {
-using Menu=minish::PhotoMenu;
+using Menu=fusion::PhotoMenu;
 void check(bool condition,const char* message) { if(!condition) throw std::runtime_error(message); }
 struct Harness {
     Menu menu;
@@ -20,32 +21,39 @@ struct Harness {
             check(w==240 && h==160,"Capture dimensions changed");saved=rgb;save_token=t;++saves;
         };
     }
-    void open() { check(menu.update(Menu::R,1,2,true),"Items -> album was not consumed"); }
+    void open() { check(menu.update(Menu::R,0,1,true),"Map -> album was not consumed"); }
     void receive(int count,int total) {
-        std::vector<minish::PhotoEntry> entries;
+        std::vector<fusion::PhotoEntry> entries;
         for(int n=0;n<count;++n) entries.push_back({std::to_string(n),"LOCAL MARCADO",std::vector<std::uint8_t>(60*36*3,128)});
         check(menu.receive_page(page_token,page,total,std::move(entries)),"Valid page rejected");
     }
-    void key(unsigned key) { check(menu.update(key,1,0,true),"Album input leaked to original menu"); }
+    void key(unsigned key) { check(menu.update(key,0,0,true),"Album input leaked to original menu"); }
 };
 void navigation() {
+    check(fusion::album_in_inventory({3,2,2,0,0}),"Manual Map rejected");
+    check(fusion::album_in_inventory({3,2,2,1,0}),"Manual Status rejected");
+    for(unsigned flag : {0u,1u,3u,4u,5u,6u})
+        check(!fusion::album_in_inventory({3,static_cast<std::uint8_t>(flag),2,0,0}),"Story/navigation pause intercepted");
+    check(!fusion::album_in_inventory({3,2,1,0,0}),"Fade intercepted");
+    check(!fusion::album_in_inventory({3,2,2,6,0}),"Status transition intercepted");
+    check(!fusion::album_in_inventory({1,2,2,0,0}),"Gameplay intercepted");
     Harness h;
-    check(!h.menu.update(Menu::R,1,2,false),"Story/fade gate bypassed");
+    check(!h.menu.update(Menu::R,0,1,false),"Story/fade gate bypassed");
     check(!h.menu.update(Menu::R,7,2,true),"Unrelated native page intercepted");
-    check(!h.menu.update(Menu::R|Menu::A,1,2,true),"Combined native input intercepted");
+    check(!h.menu.update(Menu::R|Menu::A,0,1,true),"Combined native input intercepted");
     h.open();check(h.menu.active() && h.loads==1,"Album did not load");
     h.key(Menu::A);check(h.menu.view()==Menu::View::Camera,"Camera did not open");
     h.key(Menu::B);check(h.menu.view()==Menu::View::Album,"Camera back lost album");
-    h.key(Menu::L);check(!h.menu.active(),"Left did not return to Items");
-    h.open();check(!h.menu.update(Menu::R,1,2,true),"Right did not delegate native transition");
+    h.key(Menu::L);check(!h.menu.active(),"Left did not return to Map");
+    h.open();check(!h.menu.update(Menu::R,0,1,true),"Right did not delegate native transition");
     check(!h.menu.active(),"Cross-page album remained visible");
-    check(h.menu.update(Menu::L,2,1,true),"Quest -> album not inserted");
-    check(h.menu.update(Menu::R,2,0,true),"Return to parked Quest should consume R");
-    check(!h.menu.active(),"Return to Quest left album visible");
-    check(h.menu.update(Menu::L,2,1,true),"Reverse insertion failed");
-    check(!h.menu.update(Menu::L,2,1,true),"Cross to Items did not delegate native L");
-    h.open();check(!h.menu.update(Menu::Start,1,0,true),"START did not reach native close");
-    h.open();check(!h.menu.update(0,1,0,false) && !h.menu.active(),"External lifecycle change retained UI");
+    check(h.menu.update(Menu::L,1,0,true),"Status -> album not inserted");
+    check(h.menu.update(Menu::R,1,0,true),"Return to parked Status should consume R");
+    check(!h.menu.active(),"Return to Status left album visible");
+    check(h.menu.update(Menu::L,1,0,true),"Reverse insertion failed");
+    check(!h.menu.update(Menu::L,1,0,true),"Cross to Map did not delegate native L");
+    h.open();check(!h.menu.update(Menu::Start,0,0,true),"START did not reach native close");
+    h.open();check(!h.menu.update(0,0,0,false) && !h.menu.active(),"External lifecycle change retained UI");
 }
 void capture() {
     Harness h;h.open();h.receive(0,0);h.key(Menu::A);h.key(Menu::A);
@@ -82,7 +90,7 @@ void paging() {
     check(!h.menu.receive_page(old,0,0,{}),"Closed/reset menu accepted page callback");
 }
 void presentation() {
-    Harness h;minish::PhotoMenuPresentation display;
+    Harness h;fusion::PhotoMenuPresentation display;
     std::vector<std::uint8_t> native(240*160*3,214),out;
     // An animated backdrop must survive each intermediate transition frame.
     const auto original=native;
@@ -92,7 +100,7 @@ void presentation() {
         native[0]=static_cast<std::uint8_t>(frame);
         check(display.compose(h.menu,native.data(),frame,true,out),"Opening page did not compose");
         for(int y=0;y<160;++y) for(int x=0;x<240;++x) {
-            if(minish::PhotoMenuPresentation::album_content_pixel(x,y)) continue;
+            if(fusion::PhotoMenuPresentation::album_content_pixel(x,y)) continue;
             const int p=(y*240+x)*3;
             check(std::equal(out.begin()+p,out.begin()+p+3,native.begin()+p),
                 "Backdrop, border or original L/R controls changed");
@@ -110,11 +118,12 @@ void presentation() {
     h.open();display.compose(h.menu,native.data(),117,true,out);
     check(!display.compose(h.menu,native.data(),118,false,out),"Album leaked into gameplay/restore");
     check(std::equal(native.begin()+1,native.end(),original.begin()+1),"Compositor modified guest pixels");
-    std::vector<std::uint8_t> fake_rom(0x1000000);
+    std::vector<std::uint8_t> fake_rom(0x800000);
     check(!h.menu.load_native_font(fake_rom.data(),fake_rom.size()),"Unknown font layout accepted");
-    const unsigned char pointer[]={0x60,0x2F,0x69,0x08};
-    std::copy(std::begin(pointer),std::end(pointer),fake_rom.begin()+0x109248);
-    fake_rom[0x692F60+'A'*64+3*4+1]=0xE0;
+    const unsigned char pointer[]={0xAC,0x2F,0x68,0x08};
+    std::copy(std::begin(pointer),std::end(pointer),fake_rom.begin()+0x791D8);
+    fake_rom[0x576234+0x81]=8;
+    fake_rom[0x682FAC+0x81*32+3*4+1]=0x20;
     check(h.menu.load_native_font(fake_rom.data(),fake_rom.size()),"Bounded native font unavailable");
     check(!h.menu.load_native_font(fake_rom.data(),1024),"Truncated ROM accepted for font");
 }

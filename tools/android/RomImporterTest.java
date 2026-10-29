@@ -1,4 +1,4 @@
-package io.github.genissonemilio.minishcap;
+package io.github.genissonemilio.metroidfusion;
 import java.io.*;
 import java.nio.file.*;
 import java.util.Arrays;
@@ -21,13 +21,13 @@ public class RomImporterTest {
         return bytes.toByteArray();
     }
     public static void main(String[] args) throws Exception {
-        Path folder=Files.createTempDirectory("minish-import-test");
+        Path folder=Files.createTempDirectory("fusion-import-test");
         File dest=folder.resolve("game.gba").toFile();
         try {
             Files.write(dest.toPath(),new byte[]{1,2,3});
             reject(new byte[0],dest);
-            reject(new byte[16777216],dest); // Correct size alone is insufficient.
-            reject(new byte[16777217],dest);
+            reject(new byte[8388608],dest); // Correct size alone is insufficient.
+            reject(new byte[8388609],dest);
             reject(zip("../../outside.gba",new byte[16]),dest);
             reject(zip("readme.txt",new byte[]{1}),dest);
             reject(zip("padding.txt",new byte[32*1024*1024+1]),dest);

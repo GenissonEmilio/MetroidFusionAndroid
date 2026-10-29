@@ -1,7 +1,7 @@
 #include "pixel_presenter.h"
 #include <atomic>
 
-namespace minish {
+namespace fusion {
 namespace {
 std::atomic<PixelMode> mode{PixelMode::Smooth};
 CaptureSink capture_sink=nullptr;

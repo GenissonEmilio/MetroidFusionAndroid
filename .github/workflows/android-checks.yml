@@ -29,18 +29,18 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y libsdl2-dev
           mkdir -p build/pixel-test
-          g++ -std=c++17 -O2 -DMINISH_TEST_SDL -Isrc tests/pixel_filter_test.cpp src/pixel_presenter.cpp $(sdl2-config --cflags --libs) -o build/pixel-test/check
+          g++ -std=c++17 -O2 -DFUSION_TEST_SDL -Isrc tests/pixel_filter_test.cpp src/pixel_presenter.cpp $(sdl2-config --cflags --libs) -o build/pixel-test/check
           SDL_VIDEODRIVER=dummy build/pixel-test/check
       - name: Verify transactional ROM imports and bounded ZIP reads
         run: |
           mkdir -p build/import-test
-          javac -d build/import-test android/app/src/main/java/io/github/genissonemilio/minishcap/RomImporter.java tools/android/RomImporterTest.java
-          java -cp build/import-test io.github.genissonemilio.minishcap.RomImporterTest
+          javac -d build/import-test android/app/src/main/java/io/github/genissonemilio/metroidfusion/RomImporter.java tools/android/RomImporterTest.java
+          java -cp build/import-test io.github.genissonemilio.metroidfusion.RomImporterTest
       - name: Verify private album persistence and limits
         run: |
           mkdir -p build/album-test
-          javac -d build/album-test android/app/src/main/java/io/github/genissonemilio/minishcap/CaptureStore.java tools/android/CaptureStoreTest.java
-          java -cp build/album-test io.github.genissonemilio.minishcap.CaptureStoreTest
+          javac -d build/album-test android/app/src/main/java/io/github/genissonemilio/metroidfusion/CaptureStore.java tools/android/CaptureStoreTest.java
+          java -cp build/album-test io.github.genissonemilio.metroidfusion.CaptureStoreTest
       - name: Check Python and shell entrypoints
         run: |
           python3 -m py_compile tools/android/*.py

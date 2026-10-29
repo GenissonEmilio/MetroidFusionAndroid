@@ -22,8 +22,8 @@ from __future__ import annotations
 import argparse, json, pathlib, socket, struct, subprocess, sys, time
 from typing import Optional
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent          # MinishCapRecomp/
-NATIVE_EXE = ROOT / "build" / "MinishCapRecomp.exe"
+ROOT = pathlib.Path(__file__).resolve().parent.parent          # FusionRecomp/
+NATIVE_EXE = ROOT / "build" / "host" / "FusionRecomp.exe"
 OUT = ROOT / "tools" / "repro_out"
 
 SPIN_PC = 0x08004286

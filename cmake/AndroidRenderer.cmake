@@ -20,12 +20,12 @@ file(READ "${minish_window}" window_source)
 minish_replace_once(window_source "#include \"host_window.h\""
     "#include \"host_window.h\"\n#include \"pixel_presenter.h\"")
 minish_replace_once(window_source "    SDL_Texture*  texture  = nullptr;"
-    "    SDL_Texture*  texture  = nullptr;\n    minish::PixelPresenter pixel_presenter;")
+    "    SDL_Texture*  texture  = nullptr;\n    fusion::PixelPresenter pixel_presenter;")
 minish_replace_once(window_source
     "    if (b->resize_driven_view || b->expanded_view || b->touch_policy) {"
     [=[    if (b->touch_policy && !b->resize_driven_view && !b->expanded_view) {
-        const auto pixels = minish::pixel_layout(drawable_w, drawable_h,
-            b->base_w, b->base_h, minish::pixel_mode());
+        const auto pixels = fusion::pixel_layout(drawable_w, drawable_h,
+            b->base_w, b->base_h, fusion::pixel_mode());
         layout = {pixels.x, pixels.y, pixels.width, pixels.height, pixels.integer_scale};
     } else if (b->resize_driven_view || b->expanded_view || b->touch_policy) {]=])
 minish_replace_once(window_source
