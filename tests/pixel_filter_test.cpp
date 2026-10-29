@@ -144,12 +144,8 @@ void check_renderer() {
 
 int main() {
     check_filter(); check_layout();
-    const fusion::MenuSnapshot inventory{2,2,7,2,1,2,1};
-    check(fusion::album_in_inventory(inventory),"Inventory context not recognized");
-    for(int field=0;field<7;++field) {
-        auto altered=inventory;auto* bytes=reinterpret_cast<std::uint8_t*>(&altered);
-        bytes[field]=0;check(!fusion::album_in_inventory(altered),"Album appears outside inventory");
-    }
+    check(fusion::album_in_inventory({3,2,2,0,0}),"Fusion manual pause not recognized");
+    check(!fusion::album_in_inventory({3,1,2,3,2}),"Album appears in ADAM conversation");
 #if defined(FUSION_TEST_SDL)
     check_renderer();
 #endif
